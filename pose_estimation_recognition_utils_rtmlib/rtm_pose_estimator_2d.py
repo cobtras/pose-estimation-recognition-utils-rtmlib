@@ -158,7 +158,7 @@ class RTMPoseEstimator2D:
             
             if keypoints is None or len(keypoints) == 0:
                 return Image2DResult(
-                    image_idx=image_idx,
+                    frame_idx=image_idx,
                     keypoints=np.empty((0, 133, 2)),
                     scores=np.empty((0, 133)),
                     bboxes=np.empty((0, 5)),
@@ -214,7 +214,7 @@ class RTMPoseEstimator2D:
             bboxes_array = np.array(bboxes)
             
             return Image2DResult(
-                image_idx=image_idx,
+                frame_idx=image_idx,
                 keypoints=keypoints,
                 scores=confidence_scores,
                 bboxes=bboxes_array,
@@ -224,7 +224,7 @@ class RTMPoseEstimator2D:
         except Exception as e:
             print(f"Fehler bei der Bildverarbeitung: {e}")
             return Image2DResult(
-                image_idx=image_idx,
+                frame_idx=image_idx,
                 keypoints=np.empty((0, 133, 2)),
                 scores=np.empty((0, 133)),
                 bboxes=np.empty((0, 5)),
@@ -288,7 +288,7 @@ class RTMPoseEstimator2D:
                     draw_style=draw_style
                 )
         
-        return {annotated_image, result}
+        return annotated_image, result
     
     def process_image_with_annotation_from_file(
         self,
@@ -349,7 +349,7 @@ class RTMPoseEstimator2D:
         frame_results = []
         start_time = time.time()
         
-        pbar = tqdm(total=100)
+        pbar = tqdm(total=total_frames)
         for frame_idx in range(total_frames):
             ret, frame = cap.read()
             if not ret:
