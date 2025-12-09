@@ -5,11 +5,13 @@ except ImportError:
 
 from typing import Union, List, Tuple, Optional
 from pathlib import Path
-import json
 import numpy as np
 import cv2
+import time
+from tqdm import tqdm
 
 from .Image2DResult import Image2DResult
+from .Video2DResult import Video2DResult
 
 def filter_keypoints(keypoints, scores, ignore_indices=None):
     """
@@ -100,8 +102,8 @@ class RTMPoseEstimator2D:
         kpt_threshold: float = 0.8,
         det_model_path: str = None,
         pose_model_path: str = None,
-        pose_input_size: tuple = {288, 384},
-        det_input_size: tuple = {640, 640}
+        pose_input_size: tuple = (288, 384),
+        det_input_size: tuple = (640, 640)
     ):
         
         available_modes = {'performmance', 'balanced', 'lightweight', 'individual'}
@@ -314,4 +316,67 @@ class RTMPoseEstimator2D:
             ignore_keypoints=ignore_keypoints,
             image_idx=0,
             draw_style=draw_type
+        )
+    
+    def process_video(
+        self,
+        video_path: Union[str, Path],
+        output_dir: Optional[Union[str, Path]] = None,
+        save_frames: bool = False,
+        max_frames: Optional[int] = None
+    ) -> Video2DResult:
+        """
+        
+        """
+        video_path = Path(video_path)
+        if not video_path.exists():
+            raise FileNotFoundError(f"Video nicht gefunden: {video_path}")
+        
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            raise ValueError(f"Video kann nicht geöffnet werden: {video_path}")
+        
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
+        if max_frames:
+            total_frames = min(total_frames, max_frames)
+        
+        if output_dir and save_frames:
+            output_dir = Path(output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+        
+        frame_results = []
+        start_time = time.time()
+        
+        pbar = tqdm(total=100)
+        for frame_idx in range(total_frames):
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            result = self.process_image(frame, frame_idx)
+            frame_results.append(result)
+            
+            if save_frames and output_dir and result.num_persons > 0:
+                annotated_frame = draw_skeleton_filtered(
+                    frame.copy(),
+                    result.keypoints,
+                    result.scores,
+                    kpt_thr=self.kpt_threshold
+                )
+                frame_filename = output_dir / f"frame_{frame_idx:05d}.jpg"
+                cv2.imwrite(str(frame_filename), annotated_frame)
+            pbar.update(1)
+
+        cap.release()
+        pbar.close()
+        
+        processing_time = time.time() - start_time
+
+        return Video2DResult(
+            frame_results=frame_results,
+            total_frames=len(frame_results),
+            fps=fps,
+            processing_time=processing_time
         )
