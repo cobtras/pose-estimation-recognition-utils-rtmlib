@@ -14,7 +14,7 @@
 """
 Image3DResult.py
 
-This module defines a result for a §D pose estimation.
+This module defines a result for a 3D pose estimation.
 
 Author: Jonas David Stephan, Nathalie Dollmann
 Date: 2025-12-09
