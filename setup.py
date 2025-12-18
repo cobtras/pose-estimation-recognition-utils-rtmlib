@@ -1,5 +1,7 @@
 from setuptools import setup
 import os
+import subprocess
+import re
 
 
 def read_requirements():
@@ -9,7 +11,42 @@ def read_requirements():
         return f.read().splitlines()
 
 
+def get_cuda_version():
+    try:
+        output = subprocess.check_output(['nvcc', '--version']).decode()
+        match = re.search(r'release (\d+\.\d+)', output)
+        if match:
+            return float(match.group(1))
+    except Exception:
+        return None
+
+
+def get_pytorch_version(cuda_version):
+    if cuda_version is None:
+        return 'torch>=2.4.0'  # Fallback zur CPU-Version
+    elif 12.6 <= cuda_version < 12.8:
+        return 'torch>=2.4.0+cu126'
+    elif 12.8 <= cuda_version < 13.0:
+        return 'torch>=2.4.0+cu128'
+    elif cuda_version >= 13.0:
+        return 'torch>=2.4.0+cu130'
+    else:
+        return 'torch>=2.4.0'
+
+
 requirements = read_requirements()
+
+
+try:
+    # noinspection PyPackageRequirements
+    import torch
+    torch_installed = True
+except ImportError:
+    torch_installed = False
+
+if not torch_installed:
+    detected_cuda_version = get_cuda_version()
+    requirements.append(get_pytorch_version(detected_cuda_version))
 
 
 setup(
