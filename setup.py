@@ -23,7 +23,7 @@ def get_cuda_version():
 
 def get_pytorch_version(cuda_version):
     if cuda_version is None:
-        return 'torch>=2.4.0'  # Fallback zur CPU-Version
+        return 'torch>=2.4.0'
     elif 12.6 <= cuda_version < 12.8:
         return 'torch>=2.4.0+cu126'
     elif 12.8 <= cuda_version < 13.0:
