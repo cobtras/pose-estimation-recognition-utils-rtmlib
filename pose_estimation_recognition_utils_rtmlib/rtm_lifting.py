@@ -23,6 +23,7 @@ License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 from typing import Optional
 from model_loader import ModelLoader
 from .Image2DResult import Image2DResult
+from .Image3DResult import Image3DResult
 from pose_estimation_recognition_utils import (
     Save2DData,
     Save2DDataWithName,
@@ -32,14 +33,15 @@ from pose_estimation_recognition_utils import (
 from typing import List, Union
 import numpy as np
 import torch
+import os
 
 class RTMLifting:
     def __init__(
             self, 
             num_keypoints: int, 
             mode: str, 
-            local_model: Optional[str] = None, 
-            cache_dir: Optional[str] = None,
+            local_model: Optional[os.PathLike] = None, 
+            cache_dir: Optional[os.PathLike] = None,
             device: str = 'cpu'
             ):
         """
@@ -67,7 +69,7 @@ class RTMLifting:
                         model_filename="rtm17lifting.pth",
                         cache_dir=cache_dir, 
                     )
-                    self.model = model_loader.load_model(device='cpu')
+                    self.model = model_loader.load_model(device)
 
                 elif num_keypoints == 26:
                     raise NotImplementedError("AI lifting for 26 keypoints is not implemented yet.")
@@ -78,7 +80,7 @@ class RTMLifting:
                         model_filename="rtm133lifting.pth",
                         cache_dir=cache_dir, 
                     )
-                    self.model = model_loader.load_model(device='cpu')
+                    self.model = model_loader.load_model(device)
                 else:
                     raise ValueError(f"Number of keypoints '{num_keypoints}' is not supported for AI lifting.")
             else:
@@ -94,8 +96,8 @@ class RTMLifting:
             allowed_keypoints = [17, 26, 133]
             if num_keypoints not in allowed_keypoints:
                 raise ValueError(f"Number of keypoints '{num_keypoints}' is not supported for geometric lifting.")
-            if num_keypoints == 26:
-                raise NotImplementedError("Geometric lifting for 26 keypoints is not implemented yet.")
+            if num_keypoints != 133:
+                raise NotImplementedError(f"Geometric lifting for '{num_keypoints}' keypoints is not implemented yet.")
 
     def lift_pose(self, pose_2d: Image2DResult):
         """
@@ -124,7 +126,7 @@ class RTMLifting:
         return all_3d_poses
 
     def lift_pose_Save2DData(self, pose_2d: List[Union[Save2DData, Save2DDataWithName, Save2DDataWithConfidence, 
-                                            Save2DDataWithNameAndConfidence]]):
+                                            Save2DDataWithNameAndConfidence]]) -> Image3DResult:
         """
         Lifts a 2D pose to a 3D pose using the loaded model.
 
@@ -145,7 +147,7 @@ class RTMLifting:
         else:
             raise ValueError(f"Invalid mode '{self.mode}' for lifting.")
         
-    def _model_lift(self, keypoints_2d: np.ndarray) -> np.ndarray:
+    def _model_lift(self, keypoints_2d: np.ndarray) -> Image3DResult:
         """
         Internal method to lift 2D keypoints to 3D using the AI model.
 
@@ -233,8 +235,8 @@ class RTMLifting:
         denormalized[:, 1] = (normalized_keypoints[:, 1] + 1) / 2 * (max_y - min_y) + min_y
         
         return denormalized
-    
-    def _geometric_lift(self, keypoints_2d: np.ndarray) -> np.ndarray:
+
+    def _geometric_lift(self, keypoints_2d: np.ndarray) -> Image3DResult:
         """
         Interne Methode zur geometrischen Anhebung von 2D-Keypoints auf 3D.
 
@@ -246,6 +248,69 @@ class RTMLifting:
         """
         keypoints_3d = np.zeros((self.num_keypoints, 3))
         keypoints_3d[:, :2] = keypoints_2d
-        # Beispielhafte einfache geometrische Anhebung (z.B. alle z-Koordinaten auf 0 setzen)
-        keypoints_3d[:, 2] = 0  
+        
+        for i in range(self.num_keypoints):
+            keypoints_3d[i, 2] = self._estimate_z_by_type(i)
+
+        zero_indices = np.where(np.all(keypoints_2d == [0, 0], axis=1))[0]
+        keypoints_3d[zero_indices] = [0, 0, 0]
+        
         return keypoints_3d
+    
+    def _estimate_z_by_type(self, point_idx: int) -> float:
+        """
+        Schätzt Z-Wert basierend auf Punkt-Typ (für nicht-valide Punkte)
+
+        Args:
+            point_idx: Index des Keypoints.
+
+        Returns:
+            Geschätzter Z-Wert.
+        """
+        if self.num_keypoints == 133:
+            if point_idx == 0:
+                return 0.1
+            elif 1 <= point_idx <= 4:
+                return 0.1
+            elif 5 <= point_idx <= 12:
+                return 0.0
+            elif point_idx in [9, 10]:
+                return 0.2
+            elif 91 <= point_idx <= 111:
+                return 0.25
+            elif 112 <= point_idx <= 132:
+                return 0.25
+            elif 23 <= point_idx <= 90:
+                return 0.1
+            else:
+                return 0.0
+
+        else:
+            NotImplementedError("Z-Wert-Schätzung ist nur für 133 Keypoints implementiert.")
+
+    def _calculate_3d_bboxes(
+        self, 
+        keypoints_3d: np.ndarray, 
+        scores_3d: np.ndarray
+    ) -> np.ndarray:
+        """
+        Berechnet 3D-Begrenzungsrahmen
+        Args:
+            keypoints_3d: Array der Form (N, num_keypoints, 3)
+            scores_3d: Array der Form (N, num_keypoints)
+            
+        Returns:
+            Array der Form (N, 6) mit [center_x, center_y, center_z, dim_x, dim_y, dim_z]
+        """
+        bboxes = []
+        
+        for i in range(len(keypoints_3d)): 
+            min_coords = np.min(keypoints_3d, axis=0)
+            max_coords = np.max(keypoints_3d, axis=0)
+            center = (min_coords + max_coords) / 2
+            dimensions = max_coords - min_coords
+            bboxes.append(np.concatenate([center, dimensions]))
+        else:
+            bboxes.append(np.zeros(6))
+        
+        return np.array(bboxes)
