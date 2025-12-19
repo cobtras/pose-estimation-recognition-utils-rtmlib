@@ -97,9 +97,7 @@ def add_names_and_confidence_to_result(result, pixel_list_left, pixel_list_right
 class RTMPoseEstimationFrom3DFrame:
     
     def __init__(self,
-                 min_detection_confidence: float,
-                 min_tracking_confidence: float, 
-                 focal_length: float, 
+                 focal_length: float,
                  distance: float, 
                  cx_left: int, 
                  cy_left: int, 
@@ -120,8 +118,6 @@ class RTMPoseEstimationFrom3DFrame:
         Initialize a new SkeletonDataPoint instance.
 
         Args:
-            min_detection_confidence (float): Minimum detection confidence for RTM Lib.
-            min_tracking_confidence (float): Minimum tracking confidence for RTM Lib.
             focal_length (float): Focal length of the camera.
             distance (float): Distance between the two cameras.
             cx_left (int): Principal point x-coordinate of the left camera.
@@ -154,9 +150,7 @@ class RTMPoseEstimationFrom3DFrame:
             det_model_path=det_model_path,
             pose_model_path=pose_model_path,
             pose_input_size=pose_input_size,
-            det_input_size=det_input_size,
-            min_detection_confidence=min_detection_confidence,
-            min_tracking_confidence=min_tracking_confidence
+            det_input_size=det_input_size
         )
         self.sad: SAD = SAD(focal_length, distance, cx_left, cy_left)
        
@@ -181,7 +175,7 @@ class RTMPoseEstimationFrom3DFrame:
                                                              SkeletonDataPointWithNameAndConfidence]]: 3D coordinates
         """
 
-        frame_left, frame_right = self.divide_3Dframe(frame)
+        frame_left, frame_right = self.divide_3d_frame(frame)
 
         #detecting the object using rtmlib
         results_left = self.model.process_image(frame_left)
@@ -203,7 +197,8 @@ class RTMPoseEstimationFrom3DFrame:
 
         return result
         
-    def divide_3Dframe(self, frame: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    @staticmethod
+    def divide_3d_frame(frame: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
         """
         Divides 3D frame in two frames.
