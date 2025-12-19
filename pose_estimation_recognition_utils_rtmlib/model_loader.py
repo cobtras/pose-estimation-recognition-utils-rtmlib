@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-model_133_loader.py
+model_loader.py
 
 This module provides a class to intelligently load and cache models from the Hugging Face Hub.
 
@@ -32,7 +32,7 @@ from huggingface_hub.constants import HF_HUB_CACHE
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class Model133Loader:
+class ModelLoader:
     """
     Eine Klasse zum intelligenten Laden und Cachen von Modellen vom Hugging Face Hub.
     """
