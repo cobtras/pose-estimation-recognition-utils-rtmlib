@@ -30,9 +30,18 @@ from pose_estimation_recognition_utils import (
     Save2DDataWithNameAndConfidence
 )
 from typing import List, Union
+import numpy as np
+import torch
 
 class RTMLifting:
-    def __init__(self, num_keypoints: int, mode: str, local_model: Optional[str] = None, cache_dir: Optional[str] = None):
+    def __init__(
+            self, 
+            num_keypoints: int, 
+            mode: str, 
+            local_model: Optional[str] = None, 
+            cache_dir: Optional[str] = None,
+            device: str = 'cpu'
+            ):
         """
         Initializes the RTMLifting class.
 
@@ -44,6 +53,7 @@ class RTMLifting:
         """
         self.num_keypoints = num_keypoints
         self.mode = mode
+        self.device = device
 
         available_modes = ['ai', 'geometric']
         if mode not in available_modes:
@@ -89,7 +99,7 @@ class RTMLifting:
 
     def lift_pose(self, pose_2d: Image2DResult):
         """
-        Lifts a 2D pose to a 3D pose using the loaded model.
+        Lifts a 2D pose to a 3D pose using the loaded model (possible for multiple persons).
 
         Args:
             pose_2d: Input 2D pose data.
@@ -97,17 +107,23 @@ class RTMLifting:
         Returns:
             3D pose data.
         """
-        if self.mode == 'ai':
-            pose_3d = self.model.lift(pose_2d)
-            return pose_3d
-        elif self.mode == 'geometric':
-            pose_3d = self._geometric_lift(pose_2d)
-            return pose_3d
-        else:
-            raise ValueError(f"Invalid mode '{self.mode}' for lifting.")
 
+        all_3d_poses = []
+        
+        for keypoints in pose_2d.keypoints:
+            if self.mode == 'ai':
+                keypoints_3d = self._model_lift(keypoints)
+                all_3d_poses.append(keypoints_3d)
+                
+            elif self.mode == 'geometric':
+                keypoints_3d = self._geometric_lift(keypoints)
+                all_3d_poses.append(keypoints_3d)
+            else:
+                raise ValueError(f"Invalid mode '{self.mode}' for lifting.")
 
-    def lift_pose(self, pose_2d: List[Union[Save2DData, Save2DDataWithName, Save2DDataWithConfidence, 
+        return all_3d_poses
+
+    def lift_pose_Save2DData(self, pose_2d: List[Union[Save2DData, Save2DDataWithName, Save2DDataWithConfidence, 
                                             Save2DDataWithNameAndConfidence]]):
         """
         Lifts a 2D pose to a 3D pose using the loaded model.
@@ -118,11 +134,118 @@ class RTMLifting:
         Returns:
             3D pose data.
         """
+        keypoints = np.array([[item.data['x'], item.data['y']] for item in pose_2d], dtype=np.float32)
+
         if self.mode == 'ai':
-            pose_3d = self.model.lift(pose_2d)
-            return pose_3d
+            return self._model_lift(keypoints)
+                
         elif self.mode == 'geometric':
-            pose_3d = self._geometric_lift(pose_2d)
-            return pose_3d
+            return self._geometric_lift(keypoints)
+
         else:
             raise ValueError(f"Invalid mode '{self.mode}' for lifting.")
+        
+    def _model_lift(self, keypoints_2d: np.ndarray) -> np.ndarray:
+        """
+        Internal method to lift 2D keypoints to 3D using the AI model.
+
+        Args:
+            keypoints_2d: 2D keypoints array.
+
+        Returns:
+            3D keypoints array.
+        """
+        keypoints_3d = np.zeros((self.num_keypoints, 3))
+        keypoints_3d[:, :2] = keypoints_2d
+            
+        keypoints_2d_normalized = self._normalize_by_bounding_box(keypoints_2d)
+
+        input_2d = keypoints_2d_normalized.flatten() 
+            
+        with torch.no_grad():
+            input_tensor = torch.FloatTensor(input_2d).unsqueeze(0).to(self.device)
+            output_tensor = self.model(input_tensor)
+            output_3d = output_tensor.cpu().numpy().flatten()
+        
+        output_3d_reshaped = output_3d.reshape(self.num_keypoints, 3)
+        keypoints_3d = self._denormalize_by_bounding_box(output_3d_reshaped, keypoints_2d)
+        
+        zero_indices = np.where(np.all(keypoints_2d == [0, 0], axis=1))[0]
+        keypoints_3d[zero_indices] = [0, 0, 0]
+
+        return keypoints_3d
+    
+    def _normalize_by_bounding_box(keypoints: np.ndarray) -> np.ndarray:
+        """
+        Normalisiert Keypoints in den Bereich [-1, 1] basierend auf ihrer Bounding Box.
+        
+        Args:
+            keypoints: Array der Shape (133, 2)
+        
+        Returns:
+            Normalisiertes Array der gleichen Shape
+        """
+        # Alle x-Koordinaten extrahieren
+        x_coords = keypoints[:, 0]
+        y_coords = keypoints[:, 1]
+        
+        # Bounding Box berechnen
+        min_x, max_x = np.min(x_coords), np.max(x_coords)
+        min_y, max_y = np.min(y_coords), np.max(y_coords)
+        
+        # Normalisieren auf [-1, 1]
+        normalized = keypoints.copy()
+        
+        # Vermeiden von Division durch Null
+        if max_x - min_x > 0:
+            normalized[:, 0] = 2 * (x_coords - min_x) / (max_x - min_x) - 1
+        else:
+            normalized[:, 0] = 0
+        
+        if max_y - min_y > 0:
+            normalized[:, 1] = 2 * (y_coords - min_y) / (max_y - min_y) - 1
+        else:
+            normalized[:, 1] = 0
+        
+        return normalized
+
+    def _denormalize_by_bounding_box(normalized_keypoints: np.ndarray, 
+                                original_keypoints: np.ndarray) -> np.ndarray:
+        """
+        Macht die Normalisierung basierend auf Bounding Box rückgängig.
+        
+        Args:
+            normalized_keypoints: Normalisiertes Array
+            original_keypoints: Original-Keypoints für die Bounding Box Info
+        
+        Returns:
+            Denormalisiertes Array
+        """
+        # Original Bounding Box berechnen
+        x_coords = original_keypoints[:, 0]
+        y_coords = original_keypoints[:, 1]
+        min_x, max_x = np.min(x_coords), np.max(x_coords)
+        min_y, max_y = np.min(y_coords), np.max(y_coords)
+        
+        # Denormalisieren
+        denormalized = normalized_keypoints.copy()
+        denormalized[:, 0] = (normalized_keypoints[:, 0] + 1) / 2 * (max_x - min_x) + min_x
+        denormalized[:, 1] = (normalized_keypoints[:, 1] + 1) / 2 * (max_y - min_y) + min_y
+        
+        return denormalized
+    
+    def _geometric_lift(self, keypoints_2d: np.ndarray) -> np.ndarray:
+        """
+        Interne Methode zur geometrischen Anhebung von 2D-Keypoints auf 3D.
+
+        Args:
+            keypoints_2d: 2D-Keypoints-Array.
+
+        Returns:
+            3D-Keypoints-Array.
+        """
+        keypoints_3d = np.zeros((self.num_keypoints, 3))
+        keypoints_3d[:, :2] = keypoints_2d
+        # Beispielhafte einfache geometrische Anhebung (z.B. alle z-Koordinaten auf 0 setzen)
+        keypoints_3d[:, 2] = 0  
+        return keypoints_3d
