@@ -1,15 +1,40 @@
+# Copyright 2025 Jonas David Stephan, Nathalie Dollmann
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
+RTMPoseNames.py
+
+This module provides a class to get keypoint names for RTMLib's 17-point and 133-point models.
+
+Author: Jonas David Stephan, Nathalie Dollmann
+Date: 2025-12-19
+License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+"""
 class RTMPoseNames:
     """
     A class to get keypoint names for RTMLib's 17-point and 133-point models.
     Indexing starts at 0.
     """
 
-    def __init__(self, model_type='17'):
+    def __init__(self, model_type:int = '17'):
         """
         Initialize the keypoint names for the specified model.
 
         Args:
             model_type: Either '17' for 17-point model or '133' for 133-point model
+
+        Raises:
+            ValueError: If model_type is not '17' or '133'
         """
         self.model_type=str(model_type)
 
@@ -26,7 +51,12 @@ class RTMPoseNames:
 
     @staticmethod
     def _get_17_keypoint_names():
-        """Get names for the 17-point COCO model."""
+        """
+        Get names for the 17-point COCO model.
+
+        Returns:
+            List of 17 keypoint names.
+        """
         return [
             'nose',
             'left_eye',
@@ -48,14 +78,16 @@ class RTMPoseNames:
         ]
 
     def _get_133_keypoint_names(self):
-        """Get names for the 133-point COCO-WholeBody model."""
+        """
+        Get names for the 133-point COCO-WholeBody model.
+        
+        Returns:
+            List of 133 keypoint names.
+        """
         names=[]
-
-        # 17 body keypoints (same as 17-point model)
         body_names=self._get_17_keypoint_names()
         names.extend(body_names)
 
-        # 6 foot keypoints
         foot_names=[
             'left_big_toe',
             'left_small_toe',
@@ -66,37 +98,27 @@ class RTMPoseNames:
         ]
         names.extend(foot_names)
 
-        # 68 face keypoints (from iBUG 68-point facial landmarks)
-        # Jaw (0-16)
         for i in range(17):
             names.append(f'jaw_{i}')
 
-        # Left eyebrow (17-21)
         for i in range(5):
             names.append(f'left_eyebrow_{i}')
 
-        # Right eyebrow (22-26)
         for i in range(5):
             names.append(f'right_eyebrow_{i}')
 
-        # Nose (27-35)
         for i in range(9):
             names.append(f'nose_{i}')
 
-        # Left eye (36-41)
         for i in range(6):
             names.append(f'left_eye_{i}')
 
-        # Right eye (42-47)
         for i in range(6):
             names.append(f'right_eye_{i}')
 
-        # Lips/mouth (48-67)
         for i in range(20):
             names.append(f'mouth_{i}')
 
-        # 42 hand keypoints (21 per hand, following MPII hand format)
-        # Left hand (91-111)
         left_hand_names=[
             'left_wrist_hand',
             'left_thumb_1', 'left_thumb_2', 'left_thumb_3', 'left_thumb_tip',
@@ -107,7 +129,6 @@ class RTMPoseNames:
         ]
         names.extend(left_hand_names)
 
-        # Right hand (112-132)
         right_hand_names=[
             'right_wrist_hand',
             'right_thumb_1', 'right_thumb_2', 'right_thumb_3', 'right_thumb_tip',
@@ -135,15 +156,33 @@ class RTMPoseNames:
         return self.names[index]
 
     def __getitem__(self, index):
-        """Allow dictionary-like access with square brackets."""
+        """
+        Allow dictionary-like access with square brackets.
+        
+        Args:
+            index: Integer index of the keypoint (0-based)
+            
+        Returns:
+            String name of the keypoint
+        """
         return self.get_name(index)
 
     def __len__(self):
-        """Return the number of keypoints in the model."""
+        """
+        Return the number of keypoints in the model.
+        
+        Returns:
+            Integer number of keypoints
+        """
         return self.num_points
 
     def get_all_names(self):
-        """Get all keypoint names as a list."""
+        """
+        Get all keypoint names as a list.
+        
+        Returns:
+            List of all keypoint names
+        """
         return self.names.copy()
 
     def find_index(self, name):
@@ -165,6 +204,9 @@ class RTMPoseNames:
         """
         Get the body part category for a keypoint.
 
+        Args:
+            index: Integer index of the keypoint (0-based)
+
         Returns:
             String category: 'body', 'foot', 'face', 'left_hand', or 'right_hand'
         """
@@ -173,17 +215,19 @@ class RTMPoseNames:
 
         if index < 17:
             return 'body'
-        elif index < 23:  # 17-22
+        elif index < 23:
             return 'foot'
-        elif index < 91:  # 23-90
+        elif index < 91:
             return 'face'
-        elif index < 112:  # 91-111
+        elif index < 112:
             return 'left_hand'
-        else:  # 112-132
+        else:
             return 'right_hand'
 
     def print_summary(self):
-        """Print a summary of the keypoint model."""
+        """
+        Print a summary of the keypoint model.
+        """
         print(f"RTMLib Keypoint Model: {self.model_type}-point")
         print(f"Total keypoints: {self.num_points}")
 

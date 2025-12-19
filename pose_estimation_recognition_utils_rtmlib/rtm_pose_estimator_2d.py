@@ -1,3 +1,25 @@
+# Copyright 2025 Jonas David Stephan, Nathalie Dollmann
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
+rtm_pose_estimator_2d.py
+
+This module provides a class for 2D pose estimation using RTM models.
+
+Author: Jonas David Stephan, Nathalie Dollmann
+Date: 2025-12-19
+License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+"""
 try:
     from rtmlib import Wholebody, draw_skeleton
 except ImportError:
@@ -13,9 +35,17 @@ from tqdm import tqdm
 from .Image2DResult import Image2DResult
 from .Video2DResult import Video2DResult
 
-def filter_keypoints(keypoints, scores, ignore_indices=None):
+def filter_keypoints(keypoints, scores, ignore_indices=None) -> Tuple[np.ndarray, np.ndarray]:
     """
-    
+    Function to filter out specified keypoints by setting their coordinates and scores to zero.
+
+    Args:
+        keypoints: Array of shape (num_persons, num_keypoints, 2)
+        scores: Array of shape (num_persons, num_keypoints)
+        ignore_indices: List of keypoint indices to ignore
+
+    Returns:
+        Filtered keypoints and scores arrays.
     """
     if ignore_indices is None:
         return keypoints.copy(), scores.copy()
@@ -32,7 +62,18 @@ def filter_keypoints(keypoints, scores, ignore_indices=None):
 
 def draw_skeleton_filtered(image, keypoints, scores, ignore_indices=None, kpt_thr=0.3, draw_style = 'small') -> np.ndarray:
     """
-    
+    Function to draw skeleton on image while ignoring specified keypoints.
+
+    Args:
+        image: Input image as a numpy array.
+        keypoints: Array of shape (num_persons, num_keypoints, 2)
+        scores: Array of shape (num_persons, num_keypoints)
+        ignore_indices: List of keypoint indices to ignore
+        kpt_thr: Keypoint confidence threshold for drawing
+        draw_style: 'small' or 'full' for different skeleton styles
+
+    Returns:
+        Annotated image as a numpy array.
     """
 
     #TODO: Midsize model
@@ -105,6 +146,24 @@ class RTMPoseEstimator2D:
         pose_input_size: tuple = (288, 384),
         det_input_size: tuple = (640, 640)
     ):
+        """
+        Initialize the RTM 2D Pose Estimator.
+
+        Args:
+            mode: One of 'performance', 'balanced', 'lightweight', or 'individual'
+            backend: Backend to use ('onnxruntime', 'tensorrt', etc.)
+            device: Device to run the model on ('cpu', 'cuda', etc.)
+            to_openpose: Whether to convert keypoints to OpenPose format
+            kpt_threshold: Keypoint confidence threshold for filtering
+            det_model_path: Path to custom detection model (required for 'individual' mode)
+            pose_model_path: Path to custom pose model (required for 'individual' mode)
+            pose_input_size: Input size for the pose model (required for 'individual' mode)
+            det_input_size: Input size for the detection model (required for 'individual' mode)
+
+        Raises:
+            ValueError: If invalid mode is provided or required parameters for 'individual' mode are missing
+            RuntimeError: If there is an error initializing the RTMLib Wholebody model
+        """
         
         available_modes = {'performmance', 'balanced', 'lightweight', 'individual'}
         
@@ -147,11 +206,18 @@ class RTMPoseEstimator2D:
                     to_openpose=to_openpose
                 )
         except Exception as e:
-            raise RuntimeError(f"Fehler beim Initialisieren des RTMLib Wholebody-Modells: {e}")
+            raise RuntimeError(f"Error initializing RTMLib Wholebody model: {e}")
         
     def process_image(self, image: np.ndarray, image_idx: int = 0) -> Image2DResult:
         """
-        
+        Process 2D pose estimation on a single image.
+
+        Args:
+            image: Input image as a numpy array.
+            image_idx: Index of the image (for videos)
+
+        Returns:
+            Image2DResult containing keypoints, scores, bounding boxes, and number of persons detected
         """
         try:
             keypoints, scores = self.model(image)
@@ -222,7 +288,7 @@ class RTMPoseEstimator2D:
             )
             
         except Exception as e:
-            print(f"Fehler bei der Bildverarbeitung: {e}")
+            print(f"Error processing image: {e}")
             return Image2DResult(
                 frame_idx=image_idx,
                 keypoints=np.empty((0, 133, 2)),
@@ -233,15 +299,21 @@ class RTMPoseEstimator2D:
     
     def process_image_from_file(self, image_path: Union[str, Path]) -> Image2DResult:
         """
-        
+        Process 2D pose estimation on an image from a file path.
+
+        Args:
+            image_path: Path to the input image file.
+
+        Returns:
+            Image2DResult containing keypoints, scores, bounding boxes, and number of persons detected
         """
         image_path = Path(image_path)
         if not image_path.exists():
-            raise FileNotFoundError(f"Bild nicht gefunden: {image_path}")
+            raise FileNotFoundError(f"Image not found: {image_path}")
         
         image = cv2.imread(str(image_path))
         if image is None:
-            raise ValueError(f"Bild kann nicht geladen werden: {image_path}")
+            raise ValueError(f"Could not load image: {image_path}")
         
         result = self.process_image(image, image_idx=0)
         
@@ -258,7 +330,19 @@ class RTMPoseEstimator2D:
         draw_style: str = 'small'
     ) -> Tuple[np.ndarray, Image2DResult]:
         """
-        
+        Process 2D pose estimation on an image and return annotated image.
+
+        Args:
+            image: Input image as a numpy array.
+            draw_bbox: Whether to draw bounding boxes
+            draw_keypoints: Whether to draw keypoints and skeleton
+            keypoint_threshold: Keypoint confidence threshold for drawing
+            ignore_keypoints: List of keypoint indices to ignore when drawing
+            image_idx: Index of the image (for videos)
+            draw_style: 'small' or 'full' for different skeleton styles
+
+        Returns:
+            Tuple of (annotated_image, Image2DResult)
         """
         
         result = self.process_image(image, image_idx)
@@ -300,13 +384,27 @@ class RTMPoseEstimator2D:
         draw_type: str = 'small',
     ) -> Tuple[np.ndarray, Image2DResult]:
         """
+        Process 2D pose estimation on an image from a file path and return annotated image.
+
+        Args:
+            image_path: Path to the input image file.
+            draw_bbox: Whether to draw bounding boxes
+            draw_keypoints: Whether to draw keypoints and skeleton
+            keypoint_threshold: Keypoint confidence threshold for drawing
+            ignore_keypoints: List of keypoint indices to ignore when drawing  
+            draw_type: 'small' or 'full' for different skeleton styles
         
+        Returns:
+            Tuple of (annotated_image, Image2DResult)
+
+        Raises:
+            ValueError: If the image cannot be loaded
         """
         image_path = Path(image_path)
         
         image = cv2.imread(str(image_path))
         if image is None:
-            raise ValueError(f"Bild kann nicht geladen werden: {image_path}")
+            raise ValueError(f"Image cannot be loaded: {image_path}")
         
         return self.process_image_with_annotation(
             image,
@@ -326,15 +424,28 @@ class RTMPoseEstimator2D:
         max_frames: Optional[int] = None
     ) -> Video2DResult:
         """
-        
+        Process 2D pose estimation on a video and return results.
+
+        Args:
+            video_path: Path to the input video file.
+            output_dir: Directory to save annotated frames (if save_frames is True)
+            save_frames: Whether to save annotated frames
+            max_frames: Maximum number of frames to process (for testing)
+
+        Returns:
+            Video2DResult containing per-frame results, total frames, fps, and processing time
+
+        Raises:
+            FileNotFoundError: If the video file does not exist
+            ValueError: If the video cannot be opened
         """
         video_path = Path(video_path)
         if not video_path.exists():
-            raise FileNotFoundError(f"Video nicht gefunden: {video_path}")
+            raise FileNotFoundError(f"Video not found: {video_path}")
         
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
-            raise ValueError(f"Video kann nicht geöffnet werden: {video_path}")
+            raise ValueError(f"Video cannot be opened: {video_path}")
         
         fps = cap.get(cv2.CAP_PROP_FPS)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

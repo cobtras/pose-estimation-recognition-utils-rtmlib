@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 class ModelLoader:
     """
-    Eine Klasse zum intelligenten Laden und Cachen von Modellen vom Hugging Face Hub.
+    Class to intelligently load and cache models from the Hugging Face Hub.
     """
 
     def __init__(
@@ -45,14 +45,15 @@ class ModelLoader:
         local_model_dir: Optional[os.PathLike] = None
     ):
         """
-        Initialisiert den ModelLoader.
+        Initializes the ModelLoader.
 
         Args:
-            repo_id (str): Die HF Repo-ID (z.B. 'fhswf/rtm133lifting').
-            model_filename (str): Der Dateiname des Modells im Repo (z.B. 'rtm133lifting.pth').
-            cache_dir (os.PathLike, optional): Basis-Cache-Ordner. Standardmäßig wird der Standard-HF-Cache oder
-                                                ~/.cache/huggingface/hub verwendet.
-            local_model_dir (os.PathLike, optional): Spezifischer Ordner für lokales Modell. Überschreibt die Cache-Struktur.
+            repo_id (str): The HF Repo-ID (e.g., 'fhswf/rtm133lifting').
+            model_filename (str): The filename of the model in the repo (e.g., 'rtm133lifting.pth').
+            cache_dir (os.PathLike, optional): Base cache directory. Defaults to the standard HF cache or
+                                                ~/.cache/huggingface/hub. If None
+                                                ~/.cache/huggingface/hub used.
+            local_model_dir (os.PathLike, optional): Specific folder for local model. Overrides the cache structure.
         """
         self.repo_id = repo_id
         self.model_filename = model_filename
@@ -78,35 +79,38 @@ class ModelLoader:
 
     def _load_local_metadata(self) -> dict:
         """
-        Lädt die gespeicherten Metadaten des lokal gecachten Modells.
+        Loads local metadata of the cached model if available.
 
         Returns
-            dict: Die Metadaten als Dictionary.
+            dict: meta data dictionary or empty dict if none exists.
         """
         if self.metadata_path.exists():
             try:
                 with open(self.metadata_path, 'r') as f:
                     return json.load(f)
             except json.JSONDecodeError:
-                logger.warning(f"Metadaten-Datei {self.metadata_path} ist beschädigt.")
+                logger.warning(f"Meta data file {self.metadata_path} is corrupted.")
         return {}
 
     def _save_local_metadata(self, metadata: dict):
         """
-        Speichert Metadaten des lokal gecachten Modells.
+        Saves metadata to the local metadata file.
         
         Args:
-            metadata (dict): Die zu speichernden Metadaten.
+            metadata (dict): The metadata to save.
         """
         with open(self.metadata_path, 'w') as f:
             json.dump(metadata, f, indent=2)
 
     def _get_remote_metadata(self) -> Optional[dict]:
         """
-        Ruft die aktuellen Metadaten des Modells vom Hugging Face Hub ab.
+        Retrieves remote metadata from the Hugging Face Hub.
         
         Returns:
-            dict: Die Remote-Metadaten als Dictionary, oder None bei Fehlern.
+            dict: Remote metadata dictionary or None if retrieval fails.
+
+        Raises:
+            Exception: If there is an error fetching the metadata.
         """
         try:
             info = model_info(self.repo_id, files_metadata=True)
@@ -120,54 +124,53 @@ class ModelLoader:
                         "model_filename": self.model_filename,
                         "last_remote_commit": latest_commit_hash,
                     }
-            logger.error(f"Datei '{self.model_filename}' nicht im Repository '{self.repo_id}' gefunden.")
+            logger.error(f"File '{self.model_filename}' not found in repository '{self.repo_id}'.")
             return None
         except Exception as e:
-            logger.error(f"Fehler beim Abrufen der Remote-Metadaten: {e}")
+            logger.error(f"Error fetching remote metadata: {e}")
             return None
 
     def check_for_update(self) -> bool:
         """
-        Prüft, ob eine neuere Version des Modells auf dem Hub verfügbar ist.
+        Checks if a newer version of the model is available on the Hugging Face Hub.
 
         Returns:
-            bool: True, wenn ein Update verfügbar ist oder kein lokales Modell existiert.
-                  False, wenn die lokale Version aktuell ist.
+            bool: True, if an update is available,
+                  False, if the local model is up-to-date.
         """
         if not self.local_model_path.exists():
-            logger.info("Keine lokale Modell-Datei gefunden. Download erforderlich.")
+            logger.info("No local model file found. Download required.")
             return True
 
         remote_meta = self._get_remote_metadata()
         if remote_meta is None:
-            logger.warning("Konnte Remote-Status nicht prüfen. Verwende lokale Datei.")
+            logger.warning("Could not check remote status. Using local file.")
             return False
 
         local_commit = self.local_metadata.get("last_remote_commit")
         remote_commit = remote_meta.get("last_remote_commit")
 
         if local_commit != remote_commit:
-            logger.info(f"Update verfügbar! Lokaler Commit: {local_commit}, Remote Commit: {remote_commit}")
+            logger.info(f"Update available! Local Commit: {local_commit}, Remote Commit: {remote_commit}")
             return True
         else:
-            logger.info("Lokales Modell ist auf dem neuesten Stand.")
+            logger.info("Local model is up-to-date.")
             return False
 
     def download_model(self, force_download: bool = False) -> Path:
         """
-        Lädt das Modell herunter, wenn nötig.
+        Downloads the model from the Hugging Face Hub if needed.
 
         Args:
-            force_download (bool): Wenn True, wird das Modell auch bei vorhandener,
-                                   aktueller lokaler Datei neu heruntergeladen.
+            force_download (bool): If True, forces a re-download of the model.
 
         Returns:
-            Path: Der Pfad zur lokalen Modell-Datei.
+            Path: Path to the local model file.
         """
         needs_download = force_download or self.check_for_update()
 
         if needs_download:
-            logger.info(f"Lade Modell herunter in: {self.local_model_path}")
+            logger.info(f"Downloading model to: {self.local_model_path}")
             try:
                 downloaded_path = hf_hub_download(
                     repo_id=self.repo_id,
@@ -178,34 +181,34 @@ class ModelLoader:
 
                 import shutil
                 shutil.copy2(downloaded_path, self.local_model_path)
-                logger.info(f"Modell erfolgreich nach {self.local_model_path} heruntergeladen.")
+                logger.info(f"Model successfully downloaded to {self.local_model_path}.")
 
                 remote_meta = self._get_remote_metadata()
                 if remote_meta:
                     self.local_metadata = remote_meta
                     self._save_local_metadata(self.local_metadata)
                 else:
-                    logger.warning("Modell heruntergeladen, aber Metadaten konnten nicht gespeichert werden.")
+                    logger.warning("Model downloaded, but metadata could not be saved.")
 
             except Exception as e:
-                logger.error(f"Download fehlgeschlagen: {e}")
+                logger.error(f"Download failed: {e}")
                 raise
         else:
-            logger.info(f"Verwende vorhandenes Modell unter: {self.local_model_path}")
+            logger.info(f"Using existing model at: {self.local_model_path}")
 
         return self.local_model_path
 
     def load_model(self, force_download: bool = False, **model_load_kwargs):
         """
-        Hauptmethode: Stellt sicher, dass das aktuellste Modell vorhanden ist und lädt es.
+        Main method to download (if needed) and load the model.
 
         Args:
-            force_download (bool): Erzwingt einen neuen Download.
-            **model_load_kwargs: Zusätzliche Argumente, die an torch.load() übergeben werden.
+            force_download (bool): If True, forces a re-download of the model.
+            **model_load_kwargs: Additional keyword arguments for model loading.
 
         Returns:
-            Das geladene Modell (z.B. ein torch.nn.Module).
-            Du MUSST diese Methode an deine spezifische Modell-Ladelogik anpassen!
+            The loaded model (e.g., a torch.nn.Module).
+            You MUST adapt this method to your specific model loading logic!
         """
         model_file_path = self.download_model(force_download=force_download)
 
@@ -215,13 +218,13 @@ class ModelLoader:
             map_location = model_load_kwargs.get('map_location', device)
 
             model_data = torch.load(model_file_path, map_location=map_location)
-            logger.info(f"Modell erfolgreich von {model_file_path} geladen.")
+            logger.info(f"Model successfully loaded from {model_file_path}.")
 
             return model_data
 
         except ImportError:
-            logger.error("PyTorch (torch) ist nicht installiert, benötigt für .pth-Dateien.")
+            logger.error("PyTorch (torch) is not installed, required for .pth files.")
             raise
         except Exception as e:
-            logger.error(f"Fehler beim Laden der Modell-Datei: {e}")
+            logger.error(f"Error loading model file: {e}")
             raise

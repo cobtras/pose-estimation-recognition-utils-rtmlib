@@ -179,26 +179,22 @@ class RTMLifting:
     
     def _normalize_by_bounding_box(keypoints: np.ndarray) -> np.ndarray:
         """
-        Normalisiert Keypoints in den Bereich [-1, 1] basierend auf ihrer Bounding Box.
+        Normalizes keypoints based on their bounding box to the range [-1, 1].
         
         Args:
-            keypoints: Array der Shape (133, 2)
+            keypoints: array with shape (num_keypoints, 2)
         
         Returns:
-            Normalisiertes Array der gleichen Shape
+            Normalized array of the same shape
         """
-        # Alle x-Koordinaten extrahieren
         x_coords = keypoints[:, 0]
         y_coords = keypoints[:, 1]
         
-        # Bounding Box berechnen
         min_x, max_x = np.min(x_coords), np.max(x_coords)
         min_y, max_y = np.min(y_coords), np.max(y_coords)
         
-        # Normalisieren auf [-1, 1]
         normalized = keypoints.copy()
         
-        # Vermeiden von Division durch Null
         if max_x - min_x > 0:
             normalized[:, 0] = 2 * (x_coords - min_x) / (max_x - min_x) - 1
         else:
@@ -214,22 +210,21 @@ class RTMLifting:
     def _denormalize_by_bounding_box(normalized_keypoints: np.ndarray, 
                                 original_keypoints: np.ndarray) -> np.ndarray:
         """
-        Macht die Normalisierung basierend auf Bounding Box rückgängig.
+        Denormalizes keypoints from the range [-1, 1] back to original bounding box.
         
         Args:
-            normalized_keypoints: Normalisiertes Array
-            original_keypoints: Original-Keypoints für die Bounding Box Info
+            normalized_keypoints: normalized array with shape (num_keypoints, 2)
+            original_keypoints: original keypoints for bounding box calculation
         
         Returns:
-            Denormalisiertes Array
+            Denormalized array of the same shape
         """
-        # Original Bounding Box berechnen
         x_coords = original_keypoints[:, 0]
         y_coords = original_keypoints[:, 1]
         min_x, max_x = np.min(x_coords), np.max(x_coords)
         min_y, max_y = np.min(y_coords), np.max(y_coords)
         
-        # Denormalisieren
+
         denormalized = normalized_keypoints.copy()
         denormalized[:, 0] = (normalized_keypoints[:, 0] + 1) / 2 * (max_x - min_x) + min_x
         denormalized[:, 1] = (normalized_keypoints[:, 1] + 1) / 2 * (max_y - min_y) + min_y
@@ -238,13 +233,13 @@ class RTMLifting:
 
     def _geometric_lift(self, keypoints_2d: np.ndarray) -> Image3DResult:
         """
-        Interne Methode zur geometrischen Anhebung von 2D-Keypoints auf 3D.
+        Internal method to lift 2D keypoints to 3D using geometric heuristics.
 
         Args:
-            keypoints_2d: 2D-Keypoints-Array.
+            keypoints_2d: 2D keypoints array.
 
         Returns:
-            3D-Keypoints-Array.
+            3D keypoints array.
         """
         keypoints_3d = np.zeros((self.num_keypoints, 3))
         keypoints_3d[:, :2] = keypoints_2d
@@ -259,13 +254,13 @@ class RTMLifting:
     
     def _estimate_z_by_type(self, point_idx: int) -> float:
         """
-        Schätzt Z-Wert basierend auf Punkt-Typ (für nicht-valide Punkte)
+        Estimates the Z value based on the keypoint type.
 
         Args:
-            point_idx: Index des Keypoints.
+            point_idx: Index of the keypoint.
 
         Returns:
-            Geschätzter Z-Wert.
+            Estimated Z value.
         """
         if self.num_keypoints == 133:
             if point_idx == 0:
@@ -286,7 +281,7 @@ class RTMLifting:
                 return 0.0
 
         else:
-            NotImplementedError("Z-Wert-Schätzung ist nur für 133 Keypoints implementiert.")
+            NotImplementedError("Z value estimation is only implemented for 133 keypoints.")
 
     def _calculate_3d_bboxes(
         self, 
@@ -294,13 +289,15 @@ class RTMLifting:
         scores_3d: np.ndarray
     ) -> np.ndarray:
         """
-        Berechnet 3D-Begrenzungsrahmen
+        Calculates 3D bounding boxes from 3D keypoints.
+
         Args:
-            keypoints_3d: Array der Form (N, num_keypoints, 3)
-            scores_3d: Array der Form (N, num_keypoints)
+            keypoints_3d: array with shape (N, num_keypoints, 3)
+            scores_3d: array with shape (N, num_keypoints)
             
         Returns:
-            Array der Form (N, 6) mit [center_x, center_y, center_z, dim_x, dim_y, dim_z]
+            Array of shape (N, 6) with bounding boxes in the format 
+            [center_x, center_y, center_z, width, height, depth]
         """
         bboxes = []
         
