@@ -21,7 +21,7 @@ Date: 2025-12-18
 License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
 from typing import Optional
-from model_loader import ModelLoader
+from .model_loader import ModelLoader
 from .Image2DResult import Image2DResult
 from .Image3DResult import Image3DResult
 from pose_estimation_recognition_utils import (
