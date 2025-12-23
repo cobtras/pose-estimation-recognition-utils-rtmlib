@@ -51,7 +51,7 @@ if not torch_installed:
 
 setup(
     name='pose-estimation-recognition-utils-rtmlib',
-    version='0.1.0b1',
+    version='0.1.0',
     packages=['pose_estimation_recognition_utils_rtmlib'],
     install_requires=requirements,
     url='https://github.com/cobtras/pose-estimation-recognition-utils-rtmlib',

@@ -7,7 +7,7 @@ from .model_loader import ModelLoader
 
 from .RTMPoseNames import RTMPoseNames
 from .rtm_pose_estimator_2d import RTMPoseEstimator2D
-#from .rtm_pose_estimator_3d import RTMPoseEstimator3d
+from .rtm_pose_estimator_3d import RTMPoseEstimator3D
 from .RTMPoseEstimationFrom3DFrame import RTMPoseEstimationFrom3DFrame
 from .rtm_lifting import RTMLifting
 from .utils import (image2d_result_to_save_2d_data, image2d_result_to_save_2d_data_with_confidence,
@@ -22,9 +22,9 @@ from .utils import (image2d_result_to_save_2d_data, image2d_result_to_save_2d_da
                     video3d_result_to_video_skeleton_data_with_name,
                     video3d_result_to_video_skeleton_data_with_name_and_confidence)
 
-__version__ = '0.1.0b1'
+__version__ = '0.1.0'
 __all__ = [Image2DResult, Image3DResult, Video2DResult, Video3DResult, ModelLoader, RTMPoseNames, RTMPoseEstimator2D,
-           RTMPoseEstimationFrom3DFrame, RTMLifting, image2d_result_to_save_2d_data,
+           RTMPoseEstimator3D,RTMPoseEstimationFrom3DFrame, RTMLifting, image2d_result_to_save_2d_data,
            image2d_result_to_save_2d_data_with_confidence, image2d_result_to_save_2d_data_with_name,
            image2d_result_to_save_2d_data_with_name_and_confidence, image3d_result_to_image_skeleton_data,
            image3d_result_to_image_skeleton_data_with_confidence, image3d_result_to_image_skeleton_data_with_name,
