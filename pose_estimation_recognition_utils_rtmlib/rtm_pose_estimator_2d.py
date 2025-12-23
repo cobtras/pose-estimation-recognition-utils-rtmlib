@@ -80,7 +80,7 @@ def draw_skeleton_filtered(image, keypoints, scores, ignore_indices=None, kpt_th
 
     available_styles = {'small', 'full'}
     if draw_style not in available_styles:
-        raise ValueError(f"Ungültiger draw_style '{draw_style}'. Verfügbare Stile: {available_styles}")
+        raise ValueError(f"Invalid draw_style '{draw_style}'. Available styles: {available_styles}")
     
     if ignore_indices is None:
         from rtmlib import draw_skeleton
@@ -168,14 +168,14 @@ class RTMPoseEstimator2D:
         available_modes = {'performmance', 'balanced', 'lightweight', 'individual'}
         
         if mode not in available_modes:
-            raise ValueError(f"Ungültiger Modus '{mode}'. Verfügbare Modi: {available_modes}")
+            raise ValueError(f"Invalid mode '{mode}'. Available modes: {available_modes}")
         
         if mode == 'individual':
             if det_model_path is None or pose_model_path is None:
-                raise ValueError("Für den 'individual'-Modus müssen det_model_path und pose_model_path angegeben werden.")
+                raise ValueError("For the 'individual' mode, det_model_path and pose_model_path must be specified.")
             if pose_input_size is None or det_input_size is None:
-                raise ValueError("Für den 'individual'-Modus müssen pose_input_size und det_input_size angegeben werden.")
-            
+                raise ValueError("For the 'individual' mode, pose_input_size and det_input_size must be specified.")
+
         self.backend = backend
         self.device = device
         self.to_openpose = to_openpose
