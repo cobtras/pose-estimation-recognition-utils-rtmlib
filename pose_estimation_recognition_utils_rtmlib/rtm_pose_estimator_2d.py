@@ -165,7 +165,7 @@ class RTMPoseEstimator2D:
             RuntimeError: If there is an error initializing the RTMLib Wholebody model
         """
         
-        available_modes = {'performmance', 'balanced', 'lightweight', 'individual'}
+        available_modes = {'performance', 'balanced', 'lightweight', 'individual'}
         
         if mode not in available_modes:
             raise ValueError(f"Invalid mode '{mode}'. Available modes: {available_modes}")
