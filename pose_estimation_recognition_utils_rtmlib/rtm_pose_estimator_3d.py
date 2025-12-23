@@ -51,6 +51,24 @@ class RTMPoseEstimator3D:
         local_model: Optional[os.PathLike] = None, 
         cache_dir: Optional[os.PathLike] = None,
     ):
+        '''
+        Initializes the RTMPoseEstimator3D with specified parameters.
+
+        Args:
+            mode (str): Mode for the 2D pose estimator ('performance', 'balanced', 'lightweight', 'individual').
+            backend (str): Backend to use for model inference ('onnxruntime', 'tensorrt', etc.).
+            device (str): Device to run the models on ('cpu', 'cuda', etc.).
+            num_keypoints (int): Number of keypoints for the lifting model.
+            lifting_mode (str): Mode for the lifting model ('ai', 'geometric').
+            to_openpose (bool): Whether to convert keypoints to OpenPose format.
+            kpt_threshold (float): Keypoint confidence threshold.
+            det_model_path (str): Path to the detection model (required for 'individual' mode).
+            pose_model_path (str): Path to the pose model (required for 'individual' mode).
+            pose_input_size (tuple): Input size for the pose model (required for 'individual' mode).
+            det_input_size (tuple): Input size for the detection model (required for 'individual' mode).
+            local_model (os.PathLike, optional): Path to a local lifting model.
+            cache_dir (os.PathLike, optional): Directory to cache models.
+        '''
 
         self.estimator = RTMPoseEstimator2D(
             mode=mode,
@@ -66,7 +84,6 @@ class RTMPoseEstimator3D:
 
         self.lifting = RTMLifting(
             mode=lifting_mode,
-            backend=backend,
             device=device,
             num_keypoints=num_keypoints,
             local_model=local_model,
@@ -74,16 +91,46 @@ class RTMPoseEstimator3D:
         )
 
     def process_image(self, image: np.ndarray, image_idx: int = 0) -> Image3DResult:
-        self.lifting.lift_pose(self.estimator.process_image(image, image_idx))
+        '''
+        Function to process 3D pose estimation on a single image.
+
+        Args:
+            image (np.ndarray): Input image as a NumPy array.
+            image_idx (int): Index of the image (for tracking purposes).
+        
+        Returns:
+            Image3DResult: Result containing 3D pose estimations.
+        '''
+        return self.lifting.lift_pose(self.estimator.process_image(image, image_idx))
+
 
     def process_image_from_file(self, image_path: Union[str, Path]) -> Image3DResult:
-        self.lifting.lift_pose(self.estimator.process_image_from_file(image_path))
+        '''
+        Function to process 3D pose estimation on a single image from file.
 
+        Args:
+            image_path (Union[str, Path]): Path to the input image file.    
+        
+        Returns:
+            Image3DResult: Result containing 3D pose estimations.
+        '''
+        return self.lifting.lift_pose(self.estimator.process_image_from_file(image_path))
+    
     def process_video(
         self,
         video_path: Union[str, Path],
         max_frames: Optional[int] = None
     ) -> Video3DResult:
+        '''
+        Function to process 3D pose estimation on a video file.
+
+        Args:
+            video_path (Union[str, Path]): Path to the input video file.
+            max_frames (Optional[int]): Maximum number of frames to process. If None, process the entire video.
+        
+        Returns:
+            Video3DResult: Result containing 3D pose estimations for each frame.
+        '''
         
         video_path = Path(video_path)
         if not video_path.exists():
@@ -108,8 +155,7 @@ class RTMPoseEstimator3D:
             if not ret:
                 break
             
-            result_2d = self.process_image(frame, frame_idx)
-            result = self.lifting.lift_pose(result_2d)
+            result = self.process_image(frame, frame_idx)
             frame_results.append(result)
        
             pbar.update(1)
