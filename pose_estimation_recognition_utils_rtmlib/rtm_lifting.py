@@ -126,7 +126,7 @@ class RTMLifting:
                         model_filename="rtm17lifting.pth",
                         cache_dir=cache_dir, 
                     )
-                    self.model = model_loader.load_model(device)
+                    self.model = model_loader.load_model(device=device)
 
                 elif num_keypoints == 26:
                     raise NotImplementedError("AI lifting for 26 keypoints is not implemented yet.")
@@ -137,7 +137,7 @@ class RTMLifting:
                         model_filename="rtm133lifting.pth",
                         cache_dir=cache_dir, 
                     )
-                    self.model = model_loader.load_model(device)
+                    self.model = model_loader.load_model(device=device)
                 else:
                     raise ValueError(f"Number of keypoints '{num_keypoints}' is not supported for AI lifting.")
             else:
