@@ -35,6 +35,63 @@ import numpy as np
 import torch
 import os
 
+
+def _normalize_by_bounding_box(keypoints: np.ndarray) -> np.ndarray:
+    """
+    Normalizes keypoints based on their bounding box to the range [-1, 1].
+
+    Args:
+        keypoints: array with shape (num_keypoints, 2)
+
+    Returns:
+        Normalized array of the same shape
+    """
+    x_coords = keypoints[:, 0]
+    y_coords = keypoints[:, 1]
+
+    min_x, max_x = np.min(x_coords), np.max(x_coords)
+    min_y, max_y = np.min(y_coords), np.max(y_coords)
+
+    normalized = keypoints.copy()
+
+    if max_x - min_x > 0:
+        normalized[:, 0] = 2 * (x_coords - min_x) / (max_x - min_x) - 1
+    else:
+        normalized[:, 0] = 0
+
+    if max_y - min_y > 0:
+        normalized[:, 1] = 2 * (y_coords - min_y) / (max_y - min_y) - 1
+    else:
+        normalized[:, 1] = 0
+
+    return normalized
+
+
+def _denormalize_by_bounding_box(normalized_keypoints: np.ndarray,
+                                 original_keypoints: np.ndarray) -> np.ndarray:
+    """
+    Denormalizes keypoints from the range [-1, 1] back to original bounding box.
+
+    Args:
+        normalized_keypoints: normalized array with shape (num_keypoints, 2)
+        original_keypoints: original keypoints for bounding box calculation
+
+    Returns:
+        Denormalized array of the same shape
+    """
+    x_coords = original_keypoints[:, 0]
+    y_coords = original_keypoints[:, 1]
+    min_x, max_x = np.min(x_coords), np.max(x_coords)
+    min_y, max_y = np.min(y_coords), np.max(y_coords)
+
+
+    denormalized = normalized_keypoints.copy()
+    denormalized[:, 0] = (normalized_keypoints[:, 0] + 1) / 2 * (max_x - min_x) + min_x
+    denormalized[:, 1] = (normalized_keypoints[:, 1] + 1) / 2 * (max_y - min_y) + min_y
+
+    return denormalized
+
+
 class RTMLifting:
     def __init__(
             self, 
@@ -160,7 +217,7 @@ class RTMLifting:
         keypoints_3d = np.zeros((self.num_keypoints, 3))
         keypoints_3d[:, :2] = keypoints_2d
             
-        keypoints_2d_normalized = self._normalize_by_bounding_box(keypoints_2d)
+        keypoints_2d_normalized = _normalize_by_bounding_box(keypoints_2d)
 
         input_2d = keypoints_2d_normalized.flatten() 
             
@@ -170,66 +227,12 @@ class RTMLifting:
             output_3d = output_tensor.cpu().numpy().flatten()
         
         output_3d_reshaped = output_3d.reshape(self.num_keypoints, 3)
-        keypoints_3d = self._denormalize_by_bounding_box(output_3d_reshaped, keypoints_2d)
+        keypoints_3d = _denormalize_by_bounding_box(output_3d_reshaped, keypoints_2d)
         
         zero_indices = np.where(np.all(keypoints_2d == [0, 0], axis=1))[0]
         keypoints_3d[zero_indices] = [0, 0, 0]
 
         return keypoints_3d
-    
-    def _normalize_by_bounding_box(keypoints: np.ndarray) -> np.ndarray:
-        """
-        Normalizes keypoints based on their bounding box to the range [-1, 1].
-        
-        Args:
-            keypoints: array with shape (num_keypoints, 2)
-        
-        Returns:
-            Normalized array of the same shape
-        """
-        x_coords = keypoints[:, 0]
-        y_coords = keypoints[:, 1]
-        
-        min_x, max_x = np.min(x_coords), np.max(x_coords)
-        min_y, max_y = np.min(y_coords), np.max(y_coords)
-        
-        normalized = keypoints.copy()
-        
-        if max_x - min_x > 0:
-            normalized[:, 0] = 2 * (x_coords - min_x) / (max_x - min_x) - 1
-        else:
-            normalized[:, 0] = 0
-        
-        if max_y - min_y > 0:
-            normalized[:, 1] = 2 * (y_coords - min_y) / (max_y - min_y) - 1
-        else:
-            normalized[:, 1] = 0
-        
-        return normalized
-
-    def _denormalize_by_bounding_box(normalized_keypoints: np.ndarray, 
-                                original_keypoints: np.ndarray) -> np.ndarray:
-        """
-        Denormalizes keypoints from the range [-1, 1] back to original bounding box.
-        
-        Args:
-            normalized_keypoints: normalized array with shape (num_keypoints, 2)
-            original_keypoints: original keypoints for bounding box calculation
-        
-        Returns:
-            Denormalized array of the same shape
-        """
-        x_coords = original_keypoints[:, 0]
-        y_coords = original_keypoints[:, 1]
-        min_x, max_x = np.min(x_coords), np.max(x_coords)
-        min_y, max_y = np.min(y_coords), np.max(y_coords)
-        
-
-        denormalized = normalized_keypoints.copy()
-        denormalized[:, 0] = (normalized_keypoints[:, 0] + 1) / 2 * (max_x - min_x) + min_x
-        denormalized[:, 1] = (normalized_keypoints[:, 1] + 1) / 2 * (max_y - min_y) + min_y
-        
-        return denormalized
 
     def _geometric_lift(self, keypoints_2d: np.ndarray) -> Image3DResult:
         """
