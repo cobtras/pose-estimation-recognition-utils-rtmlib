@@ -47,7 +47,7 @@ def image2d_result_to_save_2d_data(result: Image2DResult) -> List[Save2DData]:
     i = 0
 
     for point in result.keypoints[0]:
-        back.append(Save2DData(i, point[0], point[1]))
+        back.append(Save2DData(i, float(point[0]), float(point[1])))
         i+=1
 
     return back
@@ -66,7 +66,7 @@ def image2d_result_to_save_2d_data_with_confidence(result: Image2DResult) -> Lis
     i = 0
 
     for point in result.keypoints[0]:
-        back.append(Save2DDataWithConfidence(i, point[0], point[1], result.scores[0][i]))
+        back.append(Save2DDataWithConfidence(i, float(point[0]), float(point[1]), result.scores[0][i]))
         i+=1
 
     return back
@@ -86,7 +86,7 @@ def image2d_result_to_save_2d_data_with_name(result: Image2DResult) -> List[Save
     i = 0
 
     for point in result.keypoints[0]:
-        back.append(Save2DDataWithName(i, name_list.get_name(i), point[0], point[1]))
+        back.append(Save2DDataWithName(i, name_list.get_name(i), float(point[0]), float(point[1])))
         i+=1
 
     return back
@@ -106,7 +106,8 @@ def image2d_result_to_save_2d_data_with_name_and_confidence(result: Image2DResul
     i=0
 
     for point in result.keypoints[0]:
-        back.append(Save2DDataWithNameAndConfidence(i, name_list.get_name(i), point[0], point[1], result.scores[0][i]))
+        back.append(Save2DDataWithNameAndConfidence(i, name_list.get_name(i), float(point[0]), float(point[1]),
+                                                    result.scores[0][i]))
         i+=1
 
     return back
@@ -124,7 +125,7 @@ def image3d_result_to_skeleton_data_point(result: Image3DResult) -> List[Skeleto
     back = []
     i=0
     for point in result.keypoints_3d[0]:
-        back.append(SkeletonDataPoint(i, point[0], point[1], point[2]))
+        back.append(SkeletonDataPoint(i, float(point[0]), float(point[1]), float(point[2])))
         i+=1
 
     return back
@@ -143,7 +144,8 @@ def image3d_result_to_skeleton_data_point_with_confidence(result: Image3DResult)
     i=0
 
     for point in result.keypoints_3d[0]:
-        back.append(SkeletonDataPointWithConfidence(i, point[0], point[1], point[2], result.scores_3d[0][i]))
+        back.append(SkeletonDataPointWithConfidence(i, float(point[0]), float(point[1]), float(point[2]),
+                                                    result.scores_3d[0][i]))
         i+=1
 
     return back
@@ -163,7 +165,8 @@ def image3d_result_to_skeleton_data_point_with_name(result: Image3DResult) -> Li
     i=0
 
     for point in result.keypoints_3d[0]:
-        back.append(SkeletonDataPointWithName(i, name_list.get_name(i), point[0], point[1], point[2]))
+        back.append(SkeletonDataPointWithName(i, name_list.get_name(i), float(point[0]), float(point[1]),
+                                              float(point[2])))
         i+=1
 
     return back
@@ -183,7 +186,8 @@ def image3d_result_to_skeleton_data_point_with_name_and_confidence(result: Image
     i=0
 
     for point in result.keypoints_3d[0]:
-        back.append(SkeletonDataPointWithNameAndConfidence(i, name_list.get_name(i), point[0], point[1], point[2], result.scores_3d[0][i]))
+        back.append(SkeletonDataPointWithNameAndConfidence(i, name_list.get_name(i), float(point[0]), float(point[1]),
+                                                           float(point[2]), result.scores_3d[0][i]))
         i+=1
 
     return back
