@@ -96,6 +96,34 @@ def _denormalize_by_bounding_box(normalized_keypoints: np.ndarray,
     return denormalized
 
 
+def _calculate_3d_bboxes(
+        keypoints_3d: np.ndarray
+) -> np.ndarray:
+    """
+    Calculates 3D bounding boxes from 3D keypoints.
+
+    Args:
+        keypoints_3d: array with shape (N, num_keypoints, 3)
+        scores_3d: array with shape (N, num_keypoints)
+
+    Returns:
+        Array of shape (N, 6) with bounding boxes in the format
+        [center_x, center_y, center_z, width, height, depth]
+    """
+    bboxes = []
+
+    for i in range(len(keypoints_3d)):
+        min_coords = np.min(keypoints_3d, axis=0)
+        max_coords = np.max(keypoints_3d, axis=0)
+        center = (min_coords + max_coords) / 2
+        dimensions = max_coords - min_coords
+        bboxes.append(np.concatenate([center, dimensions]))
+    else:
+        bboxes.append(np.zeros(6))
+
+    return np.array(bboxes)
+
+
 class RTMLifting:
     def __init__(
             self, 
@@ -171,7 +199,7 @@ class RTMLifting:
             if num_keypoints != 133:
                 raise NotImplementedError(f"Geometric lifting for '{num_keypoints}' keypoints is not implemented yet.")
 
-    def lift_pose(self, pose_2d: Image2DResult):
+    def lift_pose(self, pose_2d: Image2DResult) -> Image3DResult:
         """
         Lifts a 2D pose to a 3D pose using the loaded model (possible for multiple persons).
 
@@ -195,7 +223,20 @@ class RTMLifting:
             else:
                 raise ValueError(f"Invalid mode '{self.mode}' for lifting.")
 
-        return all_3d_poses
+        keypoints_3d = np.array(all_3d_poses)
+
+        return Image3DResult(
+            frame_idx=pose_2d.frame_idx,
+            keypoints_3d=keypoints_3d,
+            keypoints_2d=pose_2d.keypoints,
+            #TODO to check
+            scores_3d=pose_2d.scores,
+            scores_2d=pose_2d.scores,
+            bboxes_3d=_calculate_3d_bboxes(keypoints_3d),
+            bboxes_2d=pose_2d.bboxes,
+            num_persons=pose_2d.num_persons,
+            method=self.mode
+        )
 
     def lift_pose_Save2DData(self, pose_2d: List[Union[Save2DData, Save2DDataWithName, Save2DDataWithConfidence, 
                                             Save2DDataWithNameAndConfidence]]) -> ndarray:
@@ -301,32 +342,3 @@ class RTMLifting:
         else:
             NotImplementedError("Z value estimation is only implemented for 133 keypoints.")
             return None
-
-    def _calculate_3d_bboxes(
-        self, 
-        keypoints_3d: np.ndarray, 
-        scores_3d: np.ndarray
-    ) -> np.ndarray:
-        """
-        Calculates 3D bounding boxes from 3D keypoints.
-
-        Args:
-            keypoints_3d: array with shape (N, num_keypoints, 3)
-            scores_3d: array with shape (N, num_keypoints)
-            
-        Returns:
-            Array of shape (N, 6) with bounding boxes in the format 
-            [center_x, center_y, center_z, width, height, depth]
-        """
-        bboxes = []
-        
-        for i in range(len(keypoints_3d)): 
-            min_coords = np.min(keypoints_3d, axis=0)
-            max_coords = np.max(keypoints_3d, axis=0)
-            center = (min_coords + max_coords) / 2
-            dimensions = max_coords - min_coords
-            bboxes.append(np.concatenate([center, dimensions]))
-        else:
-            bboxes.append(np.zeros(6))
-        
-        return np.array(bboxes)

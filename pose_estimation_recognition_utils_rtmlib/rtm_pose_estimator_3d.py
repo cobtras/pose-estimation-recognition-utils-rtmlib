@@ -80,6 +80,7 @@ class RTMPoseEstimator3D:
             pose_model_path=pose_model_path,
             pose_input_size=pose_input_size,
             det_input_size=det_input_size,
+            num_keypoints=num_keypoints
         )
 
         self.lifting = RTMLifting(
