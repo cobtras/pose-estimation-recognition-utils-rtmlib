@@ -104,22 +104,25 @@ def _calculate_3d_bboxes(
 
     Args:
         keypoints_3d: array with shape (N, num_keypoints, 3)
-        scores_3d: array with shape (N, num_keypoints)
+                      N = Anzahl der Personen
 
     Returns:
         Array of shape (N, 6) with bounding boxes in the format
         [center_x, center_y, center_z, width, height, depth]
     """
-    bboxes = []
+    n=keypoints_3d.shape[0]
+    if n == 0:
+        return np.zeros((0, 6))
 
-    for i in range(len(keypoints_3d)):
-        min_coords = np.min(keypoints_3d, axis=0)
-        max_coords = np.max(keypoints_3d, axis=0)
-        center = (min_coords + max_coords) / 2
-        dimensions = max_coords - min_coords
+    bboxes=[]
+
+    for i in range(n):
+        min_vals=np.min(keypoints_3d[i], axis=0)
+        max_vals=np.max(keypoints_3d[i], axis=0)
+
+        center=(min_vals + max_vals) / 2
+        dimensions=max_vals - min_vals
         bboxes.append(np.concatenate([center, dimensions]))
-    else:
-        bboxes.append(np.zeros(6))
 
     return np.array(bboxes)
 
