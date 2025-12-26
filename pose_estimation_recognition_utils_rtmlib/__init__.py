@@ -21,7 +21,7 @@ from .utils import (image2d_result_to_save_2d_data, image2d_result_to_save_2d_da
                     image3d_result_to_skeleton_data_point_with_name_and_confidence,
                     video3d_result_to_video_skeleton_data, video3d_result_to_video_skeleton_data_with_confidence,
                     video3d_result_to_video_skeleton_data_with_name,
-                    video3d_result_to_video_skeleton_data_with_name_and_confidence, Simple3DPoseLiftingModel)
+                    video3d_result_to_video_skeleton_data_with_name_and_confidence)
 
 __version__ = '0.1.3'
 __all__ = [Image2DResult, Image3DResult, Video2DResult, Video3DResult, ModelLoader, RTMPoseNames, RTMPoseEstimator2D,
@@ -33,4 +33,4 @@ __all__ = [Image2DResult, Image3DResult, Video2DResult, Video3DResult, ModelLoad
            image3d_result_to_skeleton_data_point_with_confidence, image3d_result_to_skeleton_data_point_with_name,
            image3d_result_to_skeleton_data_point_with_name_and_confidence, video3d_result_to_video_skeleton_data,
            video3d_result_to_video_skeleton_data_with_confidence, video3d_result_to_video_skeleton_data_with_name,
-           video3d_result_to_video_skeleton_data_with_name_and_confidence]
+           video3d_result_to_video_skeleton_data_with_name_and_confidence, Simple3DPoseLiftingModel]
