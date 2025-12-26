@@ -20,10 +20,14 @@ Author: Jonas David Stephan, Nathalie Dollmann
 Date: 2025-12-18
 License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
-from typing import Optional
+from typing import Optional, Any
+
+from numpy import dtype, ndarray, float64
+
 from .model_loader import ModelLoader
 from .Image2DResult import Image2DResult
 from .Image3DResult import Image3DResult
+from .Simple3DPoseLiftingModel import Simple3DPoseLiftingModel
 from pose_estimation_recognition_utils import (
     Save2DData,
     Save2DDataWithName,
@@ -117,29 +121,40 @@ class RTMLifting:
         available_modes = ['ai', 'geometric']
         if mode not in available_modes:
             raise ValueError(f"Mode '{mode}' is not supported. Choose from {available_modes}.")
-        
+
         if mode == 'ai':
             if local_model is None:
                 if num_keypoints == 17:
-                    model_loader = ModelLoader(
+                    self.model=Simple3DPoseLiftingModel(num_keypoints=num_keypoints)
+                    self.model.to(device)
+                    self.model.eval()
+
+                    model_loader=ModelLoader(
                         repo_id="fhswf/rtm17lifting",
                         model_filename="rtm17lifting.pth",
-                        cache_dir=cache_dir, 
+                        cache_dir=cache_dir,
                     )
-                    self.model = model_loader.load_model(device=device)
+
+                    state_dict=model_loader.load_model(device=device)
+
+                    self.model.load_state_dict(state_dict)
 
                 elif num_keypoints == 26:
                     raise NotImplementedError("AI lifting for 26 keypoints is not implemented yet.")
-                
+
                 elif num_keypoints == 133:
-                    model_loader = ModelLoader(
+                    self.model=Simple3DPoseLiftingModel(num_keypoints=num_keypoints)
+                    self.model.to(device)
+                    self.model.eval()
+
+                    model_loader=ModelLoader(
                         repo_id="fhswf/rtm133lifting",
                         model_filename="rtm133lifting.pth",
-                        cache_dir=cache_dir, 
+                        cache_dir=cache_dir,
                     )
-                    self.model = model_loader.load_model(device=device)
-                else:
-                    raise ValueError(f"Number of keypoints '{num_keypoints}' is not supported for AI lifting.")
+
+                    state_dict=model_loader.load_model(device=device)
+                    self.model.load_state_dict(state_dict)
             else:
                 model_filename = local_model.split('/')[-1]
                 model_path = local_model.split('/')[:-1]
@@ -183,7 +198,7 @@ class RTMLifting:
         return all_3d_poses
 
     def lift_pose_Save2DData(self, pose_2d: List[Union[Save2DData, Save2DDataWithName, Save2DDataWithConfidence, 
-                                            Save2DDataWithNameAndConfidence]]) -> Image3DResult:
+                                            Save2DDataWithNameAndConfidence]]) -> ndarray:
         """
         Lifts a 2D pose to a 3D pose using the loaded model.
 
@@ -204,7 +219,7 @@ class RTMLifting:
         else:
             raise ValueError(f"Invalid mode '{self.mode}' for lifting.")
         
-    def _model_lift(self, keypoints_2d: np.ndarray) -> Image3DResult:
+    def _model_lift(self, keypoints_2d: np.ndarray) -> ndarray[tuple[Any, ...], dtype[Any]]:
         """
         Internal method to lift 2D keypoints to 3D using the AI model.
 
@@ -234,7 +249,7 @@ class RTMLifting:
 
         return keypoints_3d
 
-    def _geometric_lift(self, keypoints_2d: np.ndarray) -> Image3DResult:
+    def _geometric_lift(self, keypoints_2d: np.ndarray) -> ndarray[tuple[int, int], dtype[float64]]:
         """
         Internal method to lift 2D keypoints to 3D using geometric heuristics.
 
@@ -255,7 +270,7 @@ class RTMLifting:
         
         return keypoints_3d
     
-    def _estimate_z_by_type(self, point_idx: int) -> float:
+    def _estimate_z_by_type(self, point_idx: int) -> float | None:
         """
         Estimates the Z value based on the keypoint type.
 
@@ -285,6 +300,7 @@ class RTMLifting:
 
         else:
             NotImplementedError("Z value estimation is only implemented for 133 keypoints.")
+            return None
 
     def _calculate_3d_bboxes(
         self, 
