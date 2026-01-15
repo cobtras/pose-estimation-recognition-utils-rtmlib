@@ -23,7 +23,7 @@ from .utils import (image2d_result_to_save_2d_data, image2d_result_to_save_2d_da
                     video3d_result_to_video_skeleton_data_with_name,
                     video3d_result_to_video_skeleton_data_with_name_and_confidence)
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 __all__ = [Image2DResult, Image3DResult, Video2DResult, Video3DResult, ModelLoader, RTMPoseNames, RTMPoseEstimator2D,
            RTMPoseEstimator3D,RTMPoseEstimationFrom3DFrame, RTMLifting, image2d_result_to_save_2d_data,
            image2d_result_to_save_2d_data_with_confidence, image2d_result_to_save_2d_data_with_name,
