@@ -61,13 +61,13 @@ def add_confidence_to_result(result, pixel_list_left, pixel_list_right):
     """
     back = []
     for point in result:
-        confidence_left = next((p.confidence for p in pixel_list_left if p.id == point.id), 0)
-        confidence_right = next((p.confidence for p in pixel_list_right if p.id == point.id), 0)
+        confidence_left = next((p.get_data()["confidence"] for p in pixel_list_left if p.get_data()["id"] == point.get_data()["id"]), 0)
+        confidence_right = next((p.get_data()["confidence"] for p in pixel_list_right if p.get_data()["id"] == point.get_data()["id"]), 0)
         if confidence_left < confidence_right:
             confidence = confidence_left
         else:
             confidence = confidence_right
-        back.append(SkeletonDataPointWithConfidence(point.id, point.x, point.y, point.z, confidence))
+        back.append(SkeletonDataPointWithConfidence(point.get_data()["id"], point.get_data()["x"], point.get_data()["y"], point.get_data()["z"], confidence))
     return back
 
 def add_names_and_confidence_to_result(result, pixel_list_left, pixel_list_right):
