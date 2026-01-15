@@ -66,7 +66,7 @@ def image2d_result_to_save_2d_data_with_confidence(result: Image2DResult) -> Lis
     i = 0
 
     for point in result.keypoints[0]:
-        back.append(Save2DDataWithConfidence(i, float(point[0]), float(point[1]), result.scores[0][i]))
+        back.append(Save2DDataWithConfidence(i, float(point[0]), float(point[1]), float(result.scores[0][i])))
         i+=1
 
     return back
@@ -145,7 +145,7 @@ def image3d_result_to_skeleton_data_point_with_confidence(result: Image3DResult)
 
     for point in result.keypoints_3d[0]:
         back.append(SkeletonDataPointWithConfidence(i, float(point[0]), float(point[1]), float(point[2]),
-                                                    result.scores_3d[0][i]))
+                                                    float(result.scores_3d[0][i])))
         i+=1
 
     return back

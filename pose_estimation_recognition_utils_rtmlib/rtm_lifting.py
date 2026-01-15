@@ -141,9 +141,10 @@ class RTMLifting:
 
         Args:
             num_keypoints: Number of keypoints for the pose estimation.
-            mode: Mode of operation (e.g., 'train', 'eval').
+            mode: Mode of operation ('ai', 'geometric').
             local_model: Optional local model for lifting.
             cache_dir: Optional cache directory for model storage.
+            device: device for running model
         """
         self.num_keypoints = num_keypoints
         self.mode = mode
