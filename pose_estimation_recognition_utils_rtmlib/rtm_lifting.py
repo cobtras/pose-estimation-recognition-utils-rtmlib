@@ -132,7 +132,7 @@ class RTMLifting:
             self, 
             num_keypoints: int, 
             mode: str, 
-            local_model: Optional[os.PathLike] = None, 
+            special_model: str = None,
             cache_dir: Optional[os.PathLike] = None,
             device: str = 'cpu'
             ):
@@ -142,7 +142,7 @@ class RTMLifting:
         Args:
             num_keypoints: Number of keypoints for the pose estimation.
             mode: Mode of operation ('ai', 'geometric').
-            local_model: Optional local model for lifting.
+            special_model: Optional special model for lifting.
             cache_dir: Optional cache directory for model storage.
             device: device for running model
         """
@@ -155,7 +155,7 @@ class RTMLifting:
             raise ValueError(f"Mode '{mode}' is not supported. Choose from {available_modes}.")
 
         if mode == 'ai':
-            if local_model is None:
+            if special_model is None:
                 if num_keypoints == 17:
                     self.model=Simple3DPoseLiftingModel(num_keypoints=num_keypoints)
                     self.model.to(device)
@@ -188,14 +188,15 @@ class RTMLifting:
                     state_dict=model_loader.load_model(device=device)
                     self.model.load_state_dict(state_dict)
             else:
-                model_filename = local_model.split('/')[-1]
-                model_path = local_model.split('/')[:-1]
+                parts=special_model.split('/')
+                model_repo = '/'.join(parts[:2])
+                model_filename = '/'.join(parts[2:])
                 model_loader = ModelLoader(
-                    repo_id="fhswf/rtm133lifting",
+                    repo_id=model_repo,
                     model_filename=model_filename,
-                    local_model_dir=model_path
+                    local_model_dir=cache_dir
                 )
-                self.model = model_loader.load_model(device='cpu')
+                self.model = model_loader.load_model(device=device)
         else:
             allowed_keypoints = [17, 26, 133]
             if num_keypoints not in allowed_keypoints:

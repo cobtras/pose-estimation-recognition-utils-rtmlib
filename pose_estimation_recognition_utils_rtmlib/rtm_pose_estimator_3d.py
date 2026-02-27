@@ -48,7 +48,7 @@ class RTMPoseEstimator3D:
         pose_model_path: str = None,
         pose_input_size: tuple = (288, 384),
         det_input_size: tuple = (640, 640),
-        local_model: Optional[os.PathLike] = None, 
+        special_model: Optional[str] = None,
         cache_dir: Optional[os.PathLike] = None,
     ):
         '''
@@ -66,7 +66,7 @@ class RTMPoseEstimator3D:
             pose_model_path (str): Path to the pose model (required for 'individual' mode).
             pose_input_size (tuple): Input size for the pose model (required for 'individual' mode).
             det_input_size (tuple): Input size for the detection model (required for 'individual' mode).
-            local_model (os.PathLike, optional): Path to a local lifting model.
+            special_model (str, optional): Path to a special lifting model.
             cache_dir (os.PathLike, optional): Directory to cache models.
         '''
 
@@ -87,7 +87,7 @@ class RTMPoseEstimator3D:
             mode=lifting_mode,
             device=device,
             num_keypoints=num_keypoints,
-            local_model=local_model,
+            special_model=special_model,
             cache_dir=cache_dir
         )
 
