@@ -188,6 +188,9 @@ class RTMLifting:
                     state_dict=model_loader.load_model(device=device)
                     self.model.load_state_dict(state_dict)
             else:
+                self.model=Simple3DPoseLiftingModel(num_keypoints=num_keypoints)
+                self.model.to(device)
+                self.model.eval()
                 parts=special_model.split('/')
                 model_repo = '/'.join(parts[:2])
                 model_filename = '/'.join(parts[2:])
@@ -196,7 +199,8 @@ class RTMLifting:
                     model_filename=model_filename,
                     local_model_dir=cache_dir
                 )
-                self.model = model_loader.load_model(device=device)
+                state_dict=model_loader.load_model(device=device)
+                self.model.load_state_dict(state_dict)
         else:
             allowed_keypoints = [17, 26, 133]
             if num_keypoints not in allowed_keypoints:
