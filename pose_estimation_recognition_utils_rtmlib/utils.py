@@ -1,4 +1,4 @@
-# Copyright 2025 Jonas David Stephan, Nathalie Dollmann
+# Copyright 2026 Jonas David Stephan, Nathalie Dollmann
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ utils.py
 This module provides utility functions for converting between different data structures.
 
 Author: Jonas David Stephan, Nathalie Dollmann
-Date: 2025-12-19
+Date: 2026-03-13
 License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
 from typing import List
@@ -261,7 +261,7 @@ def image3d_result_to_image_skeleton_data_with_name_and_confidence(result: Image
     '''
     back = ImageSkeletonData()
 
-    points = image3d_result_to_skeleton_data_point(result)
+    points = image3d_result_to_skeleton_data_point_with_name_and_confidence(result)
 
     for point in points:
         back.add_data_point(point)

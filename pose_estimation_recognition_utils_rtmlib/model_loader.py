@@ -1,4 +1,4 @@
-# Copyright 2025 Jonas David Stephan, Nathalie Dollmann
+# Copyright 2026 Jonas David Stephan, Nathalie Dollmann
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ model_loader.py
 This module provides a class to intelligently load and cache models from the Hugging Face Hub.
 
 Author: Jonas David Stephan, Nathalie Dollmann
-Date: 2025-12-18
+Date: 2026-03-13
 License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
 
@@ -29,7 +29,7 @@ from typing import Optional
 from huggingface_hub import hf_hub_download, HfApi, model_info
 from huggingface_hub.constants import HF_HUB_CACHE
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ModelLoader:
