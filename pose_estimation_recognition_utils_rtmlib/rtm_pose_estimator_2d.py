@@ -1,4 +1,4 @@
-# Copyright 2025 Jonas David Stephan, Nathalie Dollmann
+# Copyright 2026 Jonas David Stephan, Nathalie Dollmann
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,23 +17,22 @@ rtm_pose_estimator_2d.py
 This module provides a class for 2D pose estimation using RTM models.
 
 Author: Jonas David Stephan, Nathalie Dollmann
-Date: 2025-12-19
+Date: 2026-03-12
 License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
-try:
-    from rtmlib import Wholebody, draw_skeleton, Body
-except ImportError:
-    raise ImportError("RTMLib nicht gefunden. Installiere mit: pip install rtmlib")
-
-from typing import Union, List, Tuple, Optional
-from pathlib import Path
-import numpy as np
+import logging
 import cv2
 import time
+import numpy as np
 from tqdm import tqdm
+from pathlib import Path
+from typing import Union, List, Tuple, Optional
+from rtmlib import Wholebody, draw_skeleton, Body
 
 from .Image2DResult import Image2DResult
 from .Video2DResult import Video2DResult
+
+logger = logging.getLogger(__name__)
 
 def filter_keypoints(keypoints, scores, ignore_indices=None) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -198,7 +197,7 @@ class RTMPoseEstimator2D:
         try:
             if mode == 'individual':
                 if num_keypoints == 133:
-                    self.model=Wholebody(
+                    self.model = Wholebody(
                         mode=mode,
                         backend=backend,
                         device=device,
@@ -209,7 +208,7 @@ class RTMPoseEstimator2D:
                         det_input_size=det_input_size
                     )
                 else:
-                    self.model=Body(
+                    self.model = Body(
                         mode=mode,
                         backend=backend,
                         device=device,
@@ -221,21 +220,22 @@ class RTMPoseEstimator2D:
                     )
             else:
                 if num_keypoints == 133:
-                    self.model=Wholebody(
+                    self.model = Wholebody(
                         mode=mode,
                         backend=backend,
                         device=device,
                         to_openpose=to_openpose
                     )
                 else:
-                    self.model=Body(
+                    self.model = Body(
                         mode=mode,
                         backend=backend,
                         device=device,
                         to_openpose=to_openpose
                     )
         except Exception as e:
-            raise RuntimeError(f"Error initializing RTMLib Wholebody model: {e}")
+            logger.critical(f"Failed to initialize RTMLib model: {e}")
+            raise RuntimeError(f"Error initializing RTMLib model: {e}")
 
     def process_image(self, image: np.ndarray, image_idx: int = 0) -> Image2DResult:
         """
@@ -317,7 +317,7 @@ class RTMPoseEstimator2D:
             )
 
         except Exception as e:
-            print(f"Error processing image: {e}")
+            logger.error(f"Error processing image: {e}")
             return Image2DResult(
                 frame_idx=image_idx,
                 keypoints=np.empty((0, self.num_keypoints, 2)),

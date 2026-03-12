@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Optional
 from huggingface_hub import hf_hub_download, HfApi, model_info
 from huggingface_hub.constants import HF_HUB_CACHE
+from huggingface_hub.utils import HfHubHTTPError
 
 # logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -108,9 +109,6 @@ class ModelLoader:
         
         Returns:
             dict: Remote metadata dictionary or None if retrieval fails.
-
-        Raises:
-            Exception: If there is an error fetching the metadata.
         """
         try:
             info = model_info(self.repo_id, files_metadata=True)
@@ -126,8 +124,11 @@ class ModelLoader:
                     }
             logger.error(f"File '{self.model_filename}' not found in repository '{self.repo_id}'.")
             return None
+        except HfHubHTTPError as e:
+            logger.error(f"Error fetching remote metadata from HF Hub: {e}")
+            return None
         except Exception as e:
-            logger.error(f"Error fetching remote metadata: {e}")
+            logger.error(f"Unexpected error fetching remote metadata: {e}")
             return None
 
     def check_for_update(self) -> bool:
@@ -190,7 +191,7 @@ class ModelLoader:
                 else:
                     logger.warning("Model downloaded, but metadata could not be saved.")
 
-            except Exception as e:
+            except (HfHubHTTPError, OSError) as e:
                 logger.error(f"Download failed: {e}")
                 raise
         else:
@@ -217,7 +218,7 @@ class ModelLoader:
             device = model_load_kwargs.get('device', 'cpu')
             map_location = model_load_kwargs.get('map_location', device)
 
-            model_data = torch.load(model_file_path, map_location=map_location)
+            model_data = torch.load(model_file_path, map_location=map_location, weights_only=True)
             logger.info(f"Model successfully loaded from {model_file_path}.")
 
             return model_data
@@ -225,6 +226,9 @@ class ModelLoader:
         except ImportError:
             logger.error("PyTorch (torch) is not installed, required for .pth files.")
             raise
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             logger.error(f"Error loading model file: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error loading model: {e}")
             raise
