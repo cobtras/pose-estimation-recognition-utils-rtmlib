@@ -20,7 +20,7 @@ Author: Jonas David Stephan, Nathalie Dollmann
 Date: 2026-03-17
 License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
-from typing import Optional, Any
+from typing import Optional
 
 from numpy import dtype, ndarray, float64
 
