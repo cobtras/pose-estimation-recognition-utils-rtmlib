@@ -17,7 +17,7 @@ model_loader.py
 This module provides a class to intelligently load and cache models from the Hugging Face Hub.
 
 Author: Jonas David Stephan, Nathalie Dollmann
-Date: 2026-03-13
+Date: 2026-03-17
 License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
 

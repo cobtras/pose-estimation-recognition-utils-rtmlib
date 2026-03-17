@@ -20,6 +20,12 @@
 pip install pose-estimation-recognition-utils-rtmlib
 ```
 
+> [!NOTE] 
+> For hardware acceleration during 3D lifting, please install the appropriate `onnxruntime` package for your system before installing `pose-estimation-recognition-utils-rtmlib`:
+> - For **NVIDIA GPUs (CUDA/TensorRT)**: `pip install onnxruntime-gpu`
+> - For **AMD GPUs (ROCm)**: `pip install onnxruntime-rocm`
+> - If you only want to use the **CPU**, the standard `onnxruntime` is installed automatically.
+
 ### Requirements
 
 - Python 3.10+
