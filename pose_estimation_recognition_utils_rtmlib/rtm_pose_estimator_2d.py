@@ -17,7 +17,7 @@ rtm_pose_estimator_2d.py
 This module provides a class for 2D pose estimation using RTM models.
 
 Author: Jonas David Stephan, Nathalie Dollmann
-Date: 2026-03-12
+Date: 2026-03-17
 License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
 import logging
