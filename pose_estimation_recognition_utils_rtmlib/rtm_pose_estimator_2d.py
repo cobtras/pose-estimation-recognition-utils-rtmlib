@@ -27,7 +27,7 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from typing import Union, List, Tuple, Optional
-from rtmlib import Wholebody, draw_skeleton, Body
+from rtmlib import Wholebody, Body
 
 from .Image2DResult import Image2DResult
 from .Video2DResult import Video2DResult
@@ -59,7 +59,8 @@ def filter_keypoints(keypoints, scores, ignore_indices=None) -> Tuple[np.ndarray
 
     return keypoints_filtered, scores_filtered
 
-def draw_skeleton_filtered(image, keypoints, scores, ignore_indices=None, kpt_thr=0.3, draw_style = 'small') -> np.ndarray:
+def draw_skeleton_filtered(image, keypoints, scores, ignore_indices=None, kpt_thr=0.3, draw_style = 'small',
+    person_colors=None) -> np.ndarray:
     """
     Function to draw skeleton on image while ignoring specified keypoints.
 
@@ -70,6 +71,7 @@ def draw_skeleton_filtered(image, keypoints, scores, ignore_indices=None, kpt_th
         ignore_indices: List of keypoint indices to ignore
         kpt_thr: Keypoint confidence threshold for drawing
         draw_style: 'small' or 'full' for different skeleton styles
+        person_colors: list of colors im BGR format for identifying different persons
 
     Returns:
         Annotated image as a numpy array.
@@ -82,8 +84,7 @@ def draw_skeleton_filtered(image, keypoints, scores, ignore_indices=None, kpt_th
         raise ValueError(f"Invalid draw_style '{draw_style}'. Available styles: {available_styles}")
     
     if ignore_indices is None:
-        from rtmlib import draw_skeleton
-        return draw_skeleton(image, keypoints, scores, kpt_thr=kpt_thr)
+        ignore_indices = []
 
     BODY_CONNECTIONS = [
         (0, 1), (0, 2), (1, 3), (2, 4),
@@ -112,22 +113,41 @@ def draw_skeleton_filtered(image, keypoints, scores, ignore_indices=None, kpt_th
     
     annotated_image = image.copy()
     ignore_set = set(ignore_indices)
-    
-    for person_idx in range(len(keypoints)):
-        kpts = keypoints[person_idx]
-        conf = scores[person_idx]
+
+    if person_colors is None:
+        line_color = (0, 255, 0)   # grün
+        point_color = (0, 0, 255)
+        for person_idx in range(len(keypoints)):
+            kpts = keypoints[person_idx]
+            conf = scores[person_idx]
         
-        for start_idx, end_idx in BODY_CONNECTIONS:
-            if start_idx not in ignore_set and end_idx not in ignore_set:
-                if conf[start_idx] > kpt_thr and conf[end_idx] > kpt_thr:
-                    pt1 = tuple(kpts[start_idx].astype(int))
-                    pt2 = tuple(kpts[end_idx].astype(int))
-                    cv2.line(annotated_image, pt1, pt2, (0, 255, 0), 1)
+            for start_idx, end_idx in BODY_CONNECTIONS:
+                if start_idx not in ignore_set and end_idx not in ignore_set:
+                    if conf[start_idx] > kpt_thr and conf[end_idx] > kpt_thr:
+                        pt1 = tuple(kpts[start_idx].astype(int))
+                        pt2 = tuple(kpts[end_idx].astype(int))
+                        cv2.line(annotated_image, pt1, pt2, line_color, 1)
         
-        for idx in range(len(kpts)):
-            if idx not in ignore_set and conf[idx] > kpt_thr:
-                pt = tuple(kpts[idx].astype(int))
-                cv2.circle(annotated_image, pt, 1, (0, 0, 255), -1)
+            for idx in range(len(kpts)):
+                if idx not in ignore_set and conf[idx] > kpt_thr:
+                    pt = tuple(kpts[idx].astype(int))
+                    cv2.circle(annotated_image, pt, 1, point_color, -1)
+
+    else:
+        for person_idx in range(len(keypoints)):
+            person_color=person_colors[person_idx % len(person_colors)]
+            kpts=keypoints[person_idx]
+            conf=scores[person_idx]
+            for start_idx, end_idx in BODY_CONNECTIONS:
+                if start_idx not in ignore_set and end_idx not in ignore_set:
+                    if conf[start_idx] > kpt_thr and conf[end_idx] > kpt_thr:
+                        pt1=tuple(kpts[start_idx].astype(int))
+                        pt2=tuple(kpts[end_idx].astype(int))
+                        cv2.line(annotated_image, pt1, pt2, person_color, 1)
+            for idx in range(len(kpts)):
+                if idx not in ignore_set and conf[idx] > kpt_thr:
+                    pt=tuple(kpts[idx].astype(int))
+                    cv2.circle(annotated_image, pt, 1, person_color, -1)
     
     return annotated_image
 
@@ -165,7 +185,7 @@ class RTMPoseEstimator2D:
         Raises:
             ValueError: If invalid mode is provided or required parameters for 'individual' mode are missing or
                 invalid keypoint number
-            RuntimeError: If there is an error initializing the RTMLib Wholebody model
+            RuntimeError: If there is an error initializing the RTMLib Wholebody/Body model
         """
 
         available_modes={'performance', 'balanced', 'lightweight', 'individual'}
