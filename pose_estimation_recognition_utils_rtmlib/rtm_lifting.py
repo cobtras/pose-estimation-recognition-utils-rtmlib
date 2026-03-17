@@ -27,7 +27,6 @@ from numpy import dtype, ndarray, float64
 from .model_loader import ModelLoader
 from .Image2DResult import Image2DResult
 from .Image3DResult import Image3DResult
-from .Simple3DPoseLiftingModel import Simple3DPoseLiftingModel
 from pose_estimation_recognition_utils import (
     Save2DData,
     Save2DDataWithName,
@@ -36,7 +35,6 @@ from pose_estimation_recognition_utils import (
 )
 from typing import List, Union
 import numpy as np
-import torch
 import os
 
 
@@ -157,40 +155,24 @@ class RTMLifting:
         if mode == 'ai':
             if special_model is None:
                 if num_keypoints == 17:
-                    self.model=Simple3DPoseLiftingModel(num_keypoints=num_keypoints)
-                    self.model.to(device)
-                    self.model.eval()
-
                     model_loader=ModelLoader(
                         repo_id="fhswf/rtm17lifting",
-                        model_filename="rtm17lifting.pth",
+                        model_filename="rtm17lifting.onnx",
                         cache_dir=cache_dir,
                     )
-
-                    state_dict=model_loader.load_model(device=device)
-
-                    self.model.load_state_dict(state_dict)
+                    self.model=model_loader.load_model(device=device)
 
                 elif num_keypoints == 26:
                     raise NotImplementedError("AI lifting for 26 keypoints is not implemented yet.")
 
                 elif num_keypoints == 133:
-                    self.model=Simple3DPoseLiftingModel(num_keypoints=num_keypoints)
-                    self.model.to(device)
-                    self.model.eval()
-
                     model_loader=ModelLoader(
                         repo_id="fhswf/rtm133lifting",
-                        model_filename="rtm133lifting.pth",
+                        model_filename="rtm133lifting.onnx",
                         cache_dir=cache_dir,
                     )
-
-                    state_dict=model_loader.load_model(device=device)
-                    self.model.load_state_dict(state_dict)
+                    self.model=model_loader.load_model(device=device)
             else:
-                self.model=Simple3DPoseLiftingModel(num_keypoints=num_keypoints)
-                self.model.to(device)
-                self.model.eval()
                 parts=special_model.split('/')
                 model_repo = '/'.join(parts[:2])
                 model_filename = '/'.join(parts[2:])
@@ -199,8 +181,7 @@ class RTMLifting:
                     model_filename=model_filename,
                     local_model_dir=cache_dir
                 )
-                state_dict=model_loader.load_model(device=device)
-                self.model.load_state_dict(state_dict)
+                self.model=model_loader.load_model(device=device)
         else:
             allowed_keypoints = [17, 26, 133]
             if num_keypoints not in allowed_keypoints:
@@ -269,9 +250,9 @@ class RTMLifting:
         else:
             raise ValueError(f"Invalid mode '{self.mode}' for lifting.")
         
-    def _model_lift(self, keypoints_2d: np.ndarray) -> ndarray[tuple[Any, ...], dtype[Any]]:
+    def _model_lift(self, keypoints_2d: np.ndarray) -> np.ndarray:
         """
-        Internal method to lift 2D keypoints to 3D using the AI model.
+        Internal method to lift 2D keypoints to 3D using the AI model via ONNX Runtime.
 
         Args:
             keypoints_2d: 2D keypoints array.
@@ -284,12 +265,12 @@ class RTMLifting:
             
         keypoints_2d_normalized = _normalize_by_bounding_box(keypoints_2d)
 
-        input_2d = keypoints_2d_normalized.flatten() 
+        input_2d = keypoints_2d_normalized.flatten().astype(np.float32)
+        input_2d = np.expand_dims(input_2d, axis=0)
             
-        with torch.no_grad():
-            input_tensor = torch.FloatTensor(input_2d).unsqueeze(0).to(self.device)
-            output_tensor = self.model(input_tensor)
-            output_3d = output_tensor.cpu().numpy().flatten()
+        # ONNX inference
+        input_name = self.model.get_inputs()[0].name
+        output_3d = self.model.run(None, {input_name: input_2d})[0].flatten()
         
         output_3d_reshaped = output_3d.reshape(self.num_keypoints, 3)
         keypoints_3d = _denormalize_by_bounding_box(output_3d_reshaped, keypoints_2d)

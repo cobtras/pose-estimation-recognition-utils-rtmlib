@@ -205,30 +205,27 @@ class ModelLoader:
 
         Args:
             force_download (bool): If True, forces a re-download of the model.
-            **model_load_kwargs: Additional keyword arguments for model loading.
+            **model_load_kwargs: Additional keyword arguments for ONNX InferenceSession.
 
         Returns:
-            The loaded model (e.g., a torch.nn.Module).
-            You MUST adapt this method to your specific model loading logic!
+            The loaded model (onnxruntime.InferenceSession).
         """
         model_file_path = self.download_model(force_download=force_download)
 
         try:
-            import torch
-            device = model_load_kwargs.get('device', 'cpu')
-            map_location = model_load_kwargs.get('map_location', device)
-
-            model_data = torch.load(model_file_path, map_location=map_location, weights_only=True)
-            logger.info(f"Model successfully loaded from {model_file_path}.")
-
-            return model_data
+            import onnxruntime as ort
+            providers = model_load_kwargs.get('providers', ['CUDAExecutionProvider', 'ROCMExecutionProvider', 'CPUExecutionProvider'])
+            
+            logger.info(f"Loading ONNX model from {model_file_path}...")
+            session = ort.InferenceSession(str(model_file_path), providers=providers)
+            return session
 
         except ImportError:
-            logger.error("PyTorch (torch) is not installed, required for .pth files.")
+            logger.error("onnxruntime is not installed. Please install it with 'pip install onnxruntime', 'pip install onnxruntime-gpu', or 'pip install onnxruntime-rocm'.")
             raise
         except (OSError, RuntimeError) as e:
-            logger.error(f"Error loading model file: {e}")
+            logger.error(f"Error loading ONNX model file: {e}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error loading model: {e}")
+            logger.error(f"Unexpected error loading ONNX model: {e}")
             raise
