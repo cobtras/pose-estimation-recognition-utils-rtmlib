@@ -1,4 +1,4 @@
-# Copyright 2026 Jonas David Stephan, Nathalie Dollmann
+# Copyright 2026 Jonas David Stephan
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,8 +28,9 @@ from tqdm import tqdm
 
 from .Image2DResult import Image2DResult
 from .Video2DResult import Video2DResult
-from .rtm_pose_estimator_2d import RTMPoseEstimator2D, filter_keypoints, draw_skeleton_filtered
 from .colors import PERSON_COLORS
+from.tracking import PersonTracker
+from .rtm_pose_estimator_2d import RTMPoseEstimator2D, filter_keypoints, draw_skeleton_filtered
 
 import cv2
 
@@ -188,139 +189,87 @@ class MultipleRTMPoseEstimator2D(RTMPoseEstimator2D):
         return matches, unmatched_new, unmatched_old_ids
 
     def process_video(
-            self,
-            video_path: Union[str, Path],
-            output_dir: Optional[Union[str, Path]] = None,
-            save_frames: bool = False,
-            max_frames: Optional[int] = None
+        self,
+        video_path: Union[str, Path],
+        output_dir: Optional[Union[str, Path]] = None,
+        save_frames: bool = False,
+        max_frames: Optional[int] = None
     ) -> Video2DResult:
         """
         Verarbeitet ein Video mit stabilem Personen-Tracking.
         Die Ergebnis-Listen pro Frame haben immer die Länge der maximal jemals aufgetretenen Personen.
         Nicht sichtbare Personen werden mit Nullen aufgefüllt.
-
-        Args:
-            video_path: Pfad zum Eingangsvideo.
-            output_dir: Verzeichnis zum Speichern von annotierten Einzelbildern (optional).
-            save_frames: Ob Einzelbilder gespeichert werden sollen.
-            max_frames: Maximale Anzahl zu verarbeitender Frames (für Tests).
-
-        Returns:
-            Video2DResult mit den Ergebnissen. Jedes Image2DResult in frame_results hat
-            keypoints, scores und bboxes in der Größe (max_persons, ...), wobei max_persons
-            die maximale Anzahl unterschiedlicher Personen im gesamten Video ist.
         """
-        video_path=Path(video_path)
+        video_path = Path(video_path)
         if not video_path.exists():
             raise FileNotFoundError(f"Video not found: {video_path}")
 
-        cap=cv2.VideoCapture(str(video_path))
+        cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
             raise ValueError(f"Video cannot be opened: {video_path}")
 
-        fps=cap.get(cv2.CAP_PROP_FPS)
-        total_frames=int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if max_frames:
-            total_frames=min(total_frames, max_frames)
+            total_frames = min(total_frames, max_frames)
 
         if output_dir and save_frames:
-            output_dir=Path(output_dir)
+            output_dir = Path(output_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
 
-        frame_results=[]
-        start_time=time.time()
-        pbar=tqdm(total=total_frames, desc="Processing video")
-
-        # Tracking-Status
-        self._next_id=0
-        self._prev_tracks=[]  # Liste von {'id': int, 'bbox': [x1,y1,x2,y2], 'keypoints': np.ndarray}
-        max_id=-1  # höchste jemals gesehene ID
+        tracker = PersonTracker()
+        frame_results = []
+        start_time = time.time()
+        pbar = tqdm(total=total_frames, desc="Processing video")
 
         for frame_idx in range(total_frames):
-            ret, frame=cap.read()
+            ret, frame = cap.read()
             if not ret:
                 break
 
             # 2D-Pose für aktuellen Frame
-            raw_result=self.process_image(frame, frame_idx)
+            raw_result = self.process_image(frame, frame_idx)
 
-            # ---- Tracking: Personen-IDs für diesen Frame bestimmen ----
             if raw_result.num_persons > 0:
-                new_bboxes=[box[:4] for box in raw_result.bboxes]  # [x1,y1,x2,y2]
-                new_keypoints=[kp for kp in raw_result.keypoints]  # Liste von Arrays (num_keypoints,2)
-
-                matches, unmatched_new, unmatched_old_ids=self._match_persons(
-                    new_bboxes, new_keypoints, self._prev_tracks
-                )
-
-                # IDs für aktuelle Personen initialisieren
-                person_ids=[-1] * len(new_bboxes)
-
-                # Gematchte Personen: alte IDs übernehmen
-                for new_idx, old_id in matches:
-                    person_ids[new_idx]=old_id
-
-                # Neue Personen: neue IDs vergeben
-                for new_idx in unmatched_new:
-                    person_ids[new_idx]=self._next_id
-                    self._next_id+=1
-
-                # Nächsten Tracking-Status vorbereiten
-                self._prev_tracks=[]
-                for i in range(len(new_bboxes)):
-                    self._prev_tracks.append({
-                        'id': person_ids[i],
-                        'bbox': new_bboxes[i],
-                        'keypoints': new_keypoints[i]
-                    })
-
-                # Maximale ID aktualisieren
-                max_id=max(max_id, max(person_ids))
-
+                new_bboxes = [box[:4] for box in raw_result.bboxes]  # [x1,y1,x2,y2]
+                new_keypoints = [kp for kp in raw_result.keypoints]  # Liste (num_keypoints,2)
+                person_ids, max_id = tracker.match_persons(new_bboxes, new_keypoints)
             else:
-                # Keine Personen im Frame -> Tracking leeren
-                self._prev_tracks=[]
-                person_ids=[]
+                person_ids = []
+                max_id = tracker.next_id - 1  # letzte bekannte ID
 
-            # ---- Auffüllen der Ergebnisdaten auf Länge (max_id+1) ----
-            num_total=max_id + 1 if max_id >= 0 else 0
+            # Auffüllen auf maximale Personenanzahl (max_id+1)
+            num_total = max_id + 1 if max_id >= 0 else 0
             if num_total > 0:
-                # Arrays mit Nullen initialisieren
-                full_keypoints=np.zeros((num_total, self.num_keypoints, 2), dtype=np.float32)
-                full_scores=np.zeros((num_total, self.num_keypoints), dtype=np.float32)
-                full_bboxes=np.zeros((num_total, 5), dtype=np.float32)
+                full_keypoints = np.zeros((num_total, self.num_keypoints, 2), dtype=np.float32)
+                full_scores = np.zeros((num_total, self.num_keypoints), dtype=np.float32)
+                full_bboxes = np.zeros((num_total, 5), dtype=np.float32)
 
                 if raw_result.num_persons > 0:
-                    # Für jede erkannte Person Daten an der richtigen Position einfügen
                     for i, pid in enumerate(person_ids):
-                        if pid >= 0:  # sicherheitshalber
-                            full_keypoints[pid]=raw_result.keypoints[i]
-                            full_scores[pid]=raw_result.scores[i]
-                            full_bboxes[pid]=raw_result.bboxes[i]
+                        full_keypoints[pid] = raw_result.keypoints[i]
+                        full_scores[pid] = raw_result.scores[i]
+                        full_bboxes[pid] = raw_result.bboxes[i]
 
-                # Erstelle neues Image2DResult mit den aufgefüllten Daten
-                padded_result=Image2DResult(
+                padded_result = Image2DResult(
                     frame_idx=raw_result.frame_idx,
                     keypoints=full_keypoints,
                     scores=full_scores,
                     bboxes=full_bboxes,
                     num_persons=num_total
-                    # Achtung: num_persons ist jetzt die Gesamtzahl aller jemals gesehenen Personen
                 )
             else:
-                # Keine Personen im gesamten Video bisher
-                padded_result=raw_result  # das ist bereits ein leeres Result
+                padded_result = raw_result  # leeres Result
 
             frame_results.append(padded_result)
 
-            # ---- Annotierte Frames speichern (optional) ----
+            # Annotierte Frames speichern (optional)
             if save_frames and output_dir:
-                # Farben nur für die tatsächlich sichtbaren Personen
-                colors_for_frame=None
-                if raw_result.num_persons > 0 and person_ids:
-                    colors_for_frame=[self.person_colors[pid % len(self.person_colors)] for pid in person_ids]
-
-                annotated, _=self.process_image_with_annotation(
+                # Farben nur für sichtbare Personen
+                colors = None
+                if raw_result.num_persons > 0:
+                    colors = [self.person_colors[pid % len(self.person_colors)] for pid in person_ids]
+                annotated, _ = self.process_image_with_annotation(
                     frame,
                     draw_bbox=True,
                     draw_keypoints=True,
@@ -328,17 +277,16 @@ class MultipleRTMPoseEstimator2D(RTMPoseEstimator2D):
                     ignore_keypoints=None,
                     image_idx=frame_idx,
                     draw_style='small',
-                    person_colors=colors_for_frame
+                    person_colors=colors
                 )
-                frame_filename=output_dir / f"frame_{frame_idx:05d}.jpg"
+                frame_filename = output_dir / f"frame_{frame_idx:05d}.jpg"
                 cv2.imwrite(str(frame_filename), annotated)
 
             pbar.update(1)
 
         cap.release()
         pbar.close()
-
-        processing_time=time.time() - start_time
+        processing_time = time.time() - start_time
 
         return Video2DResult(
             frame_results=frame_results,

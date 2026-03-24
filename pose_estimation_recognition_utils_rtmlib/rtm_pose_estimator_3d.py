@@ -51,7 +51,7 @@ class RTMPoseEstimator3D:
         special_model: Optional[str] = None,
         cache_dir: Optional[os.PathLike] = None,
     ):
-        '''
+        """
         Initializes the RTMPoseEstimator3D with specified parameters.
 
         Args:
@@ -68,7 +68,7 @@ class RTMPoseEstimator3D:
             det_input_size (tuple): Input size for the detection model (required for 'individual' mode).
             special_model (str, optional): Path to a special lifting model.
             cache_dir (os.PathLike, optional): Directory to cache models.
-        '''
+        """
 
         self.estimator = RTMPoseEstimator2D(
             mode=mode,
@@ -92,16 +92,16 @@ class RTMPoseEstimator3D:
         )
 
     def process_image(self, image: np.ndarray, image_idx: int = 0) -> Image3DResult:
-        '''
+        """
         Function to process 3D pose estimation on a single image.
 
         Args:
             image (np.ndarray): Input image as a NumPy array.
             image_idx (int): Index of the image (for tracking purposes).
-        
+
         Returns:
             Image3DResult: Result containing 3D pose estimations.
-        '''
+        """
         return self.lifting.lift_pose(self.estimator.process_image(image, image_idx))
 
 
