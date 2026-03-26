@@ -45,10 +45,13 @@ class PersonTracker:
                 self.next_id+=1
         else:
             # Kostenmatrix berechnen
-            cost_matrix=np.zeros((n_new, n_old))
+            cost_matrix=np.ones((n_new, n_old))
             for i in range(n_new):
                 for j in range(n_old):
                     iou=self.bbox_iou(new_bboxes[i], self.prev_tracks[j]['bbox'])
+                    if iou < self.iou_threshold:
+                        continue
+                        
                     iou_cost=1 - iou
 
                     kp_new=new_keypoints[i]
