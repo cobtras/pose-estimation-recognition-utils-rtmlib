@@ -193,7 +193,12 @@ class MultipleRTMPoseEstimator2D(RTMPoseEstimator2D):
         video_path: Union[str, Path],
         output_dir: Optional[Union[str, Path]] = None,
         save_frames: bool = False,
-        max_frames: Optional[int] = None
+        max_frames: Optional[int] = None,
+        debug: bool = False,
+        iou_threshold: float = 0.0,
+        keypoint_weight: float = 0.5,
+        bbox_smoothing: float = 0.5,
+        det_threshold: float = 0.5
     ) -> Video2DResult:
         """
         Verarbeitet ein Video mit stabilem Personen-Tracking.
@@ -217,7 +222,8 @@ class MultipleRTMPoseEstimator2D(RTMPoseEstimator2D):
             output_dir = Path(output_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
 
-        tracker = PersonTracker()
+        tracker = PersonTracker(iou_threshold=iou_threshold, keypoint_weight=keypoint_weight, debug=debug)
+        smoothed_bboxes = {}
         frame_results = []
         start_time = time.time()
         pbar = tqdm(total=total_frames, desc="Processing video")
@@ -230,10 +236,33 @@ class MultipleRTMPoseEstimator2D(RTMPoseEstimator2D):
             # 2D-Pose für aktuellen Frame
             raw_result = self.process_image(frame, frame_idx)
 
+            if raw_result.num_persons > 0 and det_threshold > 0.0:
+                valid_idx = [i for i, box in enumerate(raw_result.bboxes) if len(box) >= 5 and box[4] >= det_threshold]
+                if len(valid_idx) < raw_result.num_persons:
+                    if debug:
+                        dropped = raw_result.num_persons - len(valid_idx)
+                        dropped_scores = [box[4] for i, box in enumerate(raw_result.bboxes) if i not in valid_idx and len(box) >= 5]
+                        print(f"--- Frame {frame_idx} [Filter] ---")
+                        print(f"Verwerfe {dropped} Detection(s) (Scores: {[f'{s:.3f}' for s in dropped_scores]}) wegen Score < {det_threshold:.2f}")
+                    
+                    raw_result.bboxes = np.array([raw_result.bboxes[i] for i in valid_idx]) if len(valid_idx) > 0 else np.array([])
+                    raw_result.keypoints = np.array([raw_result.keypoints[i] for i in valid_idx]) if len(valid_idx) > 0 else np.array([])
+                    raw_result.scores = np.array([raw_result.scores[i] for i in valid_idx]) if len(valid_idx) > 0 else np.array([])
+                    raw_result.num_persons = len(valid_idx)
+
             if raw_result.num_persons > 0:
                 new_bboxes = [box[:4] for box in raw_result.bboxes]  # [x1,y1,x2,y2]
                 new_keypoints = [kp for kp in raw_result.keypoints]  # Liste (num_keypoints,2)
                 person_ids, max_id = tracker.match_persons(new_bboxes, new_keypoints)
+                
+                # Bounding Box Smoothing (EMA) anwenden
+                if bbox_smoothing > 0.0:
+                    for i, pid in enumerate(person_ids):
+                        curr_box = raw_result.bboxes[i].copy()
+                        if pid in smoothed_bboxes:
+                            curr_box[:4] = bbox_smoothing * smoothed_bboxes[pid][:4] + (1.0 - bbox_smoothing) * curr_box[:4]
+                        smoothed_bboxes[pid] = curr_box
+                        raw_result.bboxes[i] = curr_box
             else:
                 person_ids = []
                 max_id = tracker.next_id - 1  # letzte bekannte ID
