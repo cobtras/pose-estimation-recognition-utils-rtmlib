@@ -13,6 +13,7 @@
 - **Model Management**: Automatic downloading and caching of lifting models from the Hugging Face Hub. Supports pre-configured models for 17 and 133 keypoints, as well as custom models via repo-ID.
 - **Data Conversion**: Utility functions to convert RTM results to common skeleton data formats.
 - **Visualization**: Built-in filtering and skeleton drawing utilities.
+- **Tracking**: Tracking of multiple persons
 
 ## Installation
 
