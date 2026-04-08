@@ -27,7 +27,7 @@ from .utils import (image2d_result_to_save_2d_data, image2d_result_to_save_2d_da
                     video3d_result_to_video_skeleton_data_with_name_and_confidence)
 from .colors import PERSON_COLORS
 
-__version__ = '0.2.1'
+__version__ = '0.3.0'
 __all__ = [Image2DResult, Image3DResult, Video2DResult, Video3DResult, ModelLoader, RTMPoseNames, RTMPoseEstimator2D,
            RTMPoseEstimator3D, RTMPoseEstimationFrom3DFrame, MultipleRTMPoseEstimator2D, MultipleRTMPoseEstimator3D,
            RTMLifting, image2d_result_to_save_2d_data, image2d_result_to_save_2d_data_with_confidence,

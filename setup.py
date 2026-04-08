@@ -9,12 +9,18 @@ def read_requirements():
     with open(req_path, 'r') as f:
         return f.read().splitlines()
 
+def read_long_description():
+    here = os.path.dirname(os.path.abspath(__file__))
+    readme_path = os.path.join(here, 'README.md')
+    with open(readme_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
 
 requirements=read_requirements()
 
 setup(
     name='pose-estimation-recognition-utils-rtmlib',
-    version='0.2.1',
+    version='0.3.0',
     packages=['pose_estimation_recognition_utils_rtmlib'],
     install_requires=requirements,
     url='https://github.com/cobtras/pose-estimation-recognition-utils-rtmlib',
@@ -22,5 +28,6 @@ setup(
     author='Jonas David Stephan, Sabine Dawletow, Nathalie Dollmann, Benjamin Otto Ernst Bruch',
     author_email='j.stephan@system-systeme.de',
     description='Classes for AI recognition on pose estimation data with rtmlib',
-    long_description='Includes all general classes needed for AI movement recognition based on pose estimation data with rtmlib'
+    long_description=read_long_description(),          # README.md Inhalt
+    long_description_content_type='text/markdown',
 )
