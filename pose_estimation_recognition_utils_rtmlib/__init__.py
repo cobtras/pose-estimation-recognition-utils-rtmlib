@@ -14,6 +14,7 @@ from .multiple_rtm_pose_estimator_3d import MultipleRTMPoseEstimator3D
 
 from .RTMPoseNames import RTMPoseNames
 from .rtm_lifting import RTMLifting
+from .RTMPoseSkeletons import RTMPoseSkeletons
 from .utils import (image2d_result_to_save_2d_data, image2d_result_to_save_2d_data_with_confidence,
                     image2d_result_to_save_2d_data_with_name, image2d_result_to_save_2d_data_with_name_and_confidence,
                     image3d_result_to_image_skeleton_data, image3d_result_to_image_skeleton_data_with_confidence,
@@ -38,4 +39,4 @@ __all__ = [Image2DResult, Image3DResult, Video2DResult, Video3DResult, ModelLoad
            image3d_result_to_skeleton_data_point_with_confidence, image3d_result_to_skeleton_data_point_with_name,
            image3d_result_to_skeleton_data_point_with_name_and_confidence, video3d_result_to_video_skeleton_data,
            video3d_result_to_video_skeleton_data_with_confidence, video3d_result_to_video_skeleton_data_with_name,
-           video3d_result_to_video_skeleton_data_with_name_and_confidence, PERSON_COLORS]
+           video3d_result_to_video_skeleton_data_with_name_and_confidence, PERSON_COLORS, RTMPoseSkeletons]
