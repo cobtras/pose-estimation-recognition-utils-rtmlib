@@ -25,13 +25,14 @@ from typing import List
 from .Image2DResult import Image2DResult
 from .Image3DResult import Image3DResult
 from .RTMPoseNames import RTMPoseNames
+from .Video2DResult import Video2DResult
 from .Video3DResult import Video3DResult
 
 from pose_estimation_recognition_utils import (Save2DData, Save2DDataWithConfidence, Save2DDataWithName,
                                                Save2DDataWithNameAndConfidence, SkeletonDataPoint,
                                                SkeletonDataPointWithConfidence, SkeletonDataPointWithName,
                                                SkeletonDataPointWithNameAndConfidence, ImageSkeletonData,
-                                               VideoSkeletonData)
+                                               ImageSkeletonData2D, VideoSkeletonData, VideoSkeletonData2D)
 
 def image2d_result_to_save_2d_data(result: Image2DResult) -> List[Save2DData]:
     '''
@@ -357,6 +358,178 @@ def video3d_result_to_video_skeleton_data_with_name_and_confidence(result: Video
         vsd = VideoSkeletonData(i)
 
         for point in image3d_result_to_skeleton_data_point_with_name_and_confidence(frame):
+            vsd.add_data_point(point)
+
+        back.append(vsd)
+        i+=1
+
+    return back
+
+def image2d_result_to_image_skeleton_data_2d(result: Image2DResult) -> ImageSkeletonData2D:
+    '''
+    Function to convert Image2DResult to an ImageSkeletonData2D object.
+
+    Args:
+        result (Image2DResult): The input Image2DResult object.
+
+    Returns:
+        ImageSkeletonData2D: An ImageSkeletonData2D object.
+    '''
+    back = ImageSkeletonData2D()
+
+    points = image2d_result_to_save_2d_data(result)
+
+    for point in points:
+        back.add_data_point(point)
+
+    return back
+
+def image2d_result_to_image_skeleton_data_with_confidence_2d(result: Image2DResult) -> ImageSkeletonData2D:
+    '''
+    Function to convert Image2DResult to an ImageSkeletonData2D object with confidence.
+
+    Args:
+        result (Image2DResult): The input Image2DResult object.
+
+    Returns:
+        ImageSkeletonData2D: An ImageSkeletonData2D object.
+    '''
+    back = ImageSkeletonData2D()
+
+    points = image2d_result_to_save_2d_data_with_confidence(result)
+
+    for point in points:
+        back.add_data_point(point)
+
+    return back
+
+def image2d_result_to_image_skeleton_data_with_name_2d(result: Image2DResult) -> ImageSkeletonData2D:
+    '''
+    Function to convert Image2DResult to an ImageSkeletonData2D object with names.
+
+    Args:
+        result (Image2DResult): The input Image2DResult object.
+
+    Returns:
+        ImageSkeletonData2D: An ImageSkeletonData2D object.
+    '''
+    back = ImageSkeletonData2D()
+
+    points = image2d_result_to_save_2d_data_with_name(result)
+
+    for point in points:
+        back.add_data_point(point)
+
+    return back
+
+def image2d_result_to_image_skeleton_data_with_name_and_confidence_2d(result: Image2DResult) -> ImageSkeletonData2D:
+    '''
+    Function to convert Image2DResult to an ImageSkeletonData2D object with names and confidence.
+
+    Args:
+        result (Image2DResult): The input Image2DResult object.
+
+    Returns:
+        ImageSkeletonData2D: An ImageSkeletonData2D object.
+    '''
+    back = ImageSkeletonData2D()
+
+    points = image2d_result_to_save_2d_data_with_name_and_confidence(result)
+
+    for point in points:
+        back.add_data_point(point)
+
+    return back
+
+def video2d_result_to_video_skeleton_data_2d(result: Video2DResult) -> List[VideoSkeletonData2D]:
+    '''
+    Function to convert Video2DResult to a list of VideoSkeletonData2D objects.
+
+    Args:
+        result (Video2DResult): The input Video2DResult object.
+
+    Returns:
+        List[VideoSkeletonData2D]: A list of VideoSkeletonData2D objects.
+    '''
+    back = []
+    i = 0
+
+    for frame in result.frame_results:
+        vsd = VideoSkeletonData2D(i)
+
+        for point in image2d_result_to_save_2d_data(frame):
+            vsd.add_data_point(point)
+
+        back.append(vsd)
+        i+=1
+
+    return back
+
+def video2d_result_to_video_skeleton_data_with_confidence_2d(result: Video2DResult) -> List[VideoSkeletonData2D]:
+    '''
+    Function to convert Video2DResult to a list of VideoSkeletonData2D objects with confidence.
+
+    Args:
+        result (Video2DResult): The input Video2DResult object.
+
+    Returns:
+        List[VideoSkeletonData2D]: A list of VideoSkeletonData2D objects.
+    '''
+    back = []
+    i = 0
+
+    for frame in result.frame_results:
+        vsd = VideoSkeletonData2D(i)
+
+        for point in image2d_result_to_save_2d_data_with_confidence(frame):
+            vsd.add_data_point(point)
+
+        back.append(vsd)
+        i+=1
+
+    return back
+
+def video2d_result_to_video_skeleton_data_with_name_2d(result: Video2DResult) -> List[VideoSkeletonData2D]:
+    '''
+    Function to convert Video2DResult to a list of VideoSkeletonData2D objects with names.
+
+    Args:
+        result (Video2DResult): The input Video2DResult object.
+
+    Returns:
+        List[VideoSkeletonData2D]: A list of VideoSkeletonData2D objects.
+    '''
+    back = []
+    i = 0
+
+    for frame in result.frame_results:
+        vsd = VideoSkeletonData2D(i)
+
+        for point in image2d_result_to_save_2d_data_with_name(frame):
+            vsd.add_data_point(point)
+
+        back.append(vsd)
+        i+=1
+
+    return back
+
+def video2d_result_to_video_skeleton_data_with_name_and_confidence_2d(result: Video2DResult) -> List[VideoSkeletonData2D]:
+    '''
+    Function to convert Video2DResult to a list of VideoSkeletonData2D objects with names and confidence.
+
+    Args:
+        result (Video2DResult): The input Video2DResult object.
+
+    Returns:
+        List[VideoSkeletonData2D]: A list of VideoSkeletonData2D objects.
+    '''
+    back = []
+    i = 0
+
+    for frame in result.frame_results:
+        vsd = VideoSkeletonData2D(i)
+
+        for point in image2d_result_to_save_2d_data_with_name_and_confidence(frame):
             vsd.add_data_point(point)
 
         back.append(vsd)
