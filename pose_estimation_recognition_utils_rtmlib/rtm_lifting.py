@@ -331,4 +331,3 @@ class RTMLifting:
 
         else:
             raise NotImplementedError("Z value estimation is only implemented for 133 keypoints.")
-            return None
