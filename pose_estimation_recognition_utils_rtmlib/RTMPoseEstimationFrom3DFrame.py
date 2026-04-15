@@ -160,9 +160,9 @@ class RTMPoseEstimationFrom3DFrame:
 
         self.with_confidence = with_confidence
 
-    def extract_frame(self, frame: np.ndarray) -> List[Union[SkeletonDataPoint, SkeletonDataPointWithName,
+    def extract_frame(self, frame: np.ndarray) -> List[List[Union[SkeletonDataPoint, SkeletonDataPointWithName,
                                                              SkeletonDataPointWithConfidence,
-                                                             SkeletonDataPointWithNameAndConfidence]]:
+                                                             SkeletonDataPointWithNameAndConfidence]]]:
 
         """
         Extracts frames in two frames with pixel.
@@ -171,8 +171,8 @@ class RTMPoseEstimationFrom3DFrame:
             frame (np.ndarray): Video frame
 
         Returns:
-            result: List[Union[SkeletonDataPoint, SkeletonDataPointWithName, SkeletonDataPointWithConfidence,
-                                                             SkeletonDataPointWithNameAndConfidence]]: 3D coordinates
+            result: List[List[Union[SkeletonDataPoint, SkeletonDataPointWithName, SkeletonDataPointWithConfidence,
+                                                             SkeletonDataPointWithNameAndConfidence]]]: 3D coordinates per person
         """
 
         frame_left, frame_right = self.divide_3d_frame(frame)
@@ -181,21 +181,24 @@ class RTMPoseEstimationFrom3DFrame:
         results_left = self.model.process_image(frame_left)
         results_right = self.model.process_image(frame_right)
 
-        pixel_list_left = image2d_result_to_save_2d_data_with_confidence(results_left)
-        pixel_list_right = image2d_result_to_save_2d_data_with_confidence(results_right)
+        pixel_list_left_persons = image2d_result_to_save_2d_data_with_confidence(results_left)
+        pixel_list_right_persons = image2d_result_to_save_2d_data_with_confidence(results_right)
 
-        result = self.sad.merge_pixel(pixel_list_left, pixel_list_right)
+        all_results = []
+        for pixel_list_left, pixel_list_right in zip(pixel_list_left_persons, pixel_list_right_persons):
+            result = self.sad.merge_pixel(pixel_list_left, pixel_list_right)
 
-        if self.with_confidence:
-            if self.with_names:
-                result = add_names_and_confidence_to_result(result, pixel_list_left, pixel_list_right)
+            if self.with_confidence:
+                if self.with_names:
+                    result = add_names_and_confidence_to_result(result, pixel_list_left, pixel_list_right)
+                else:
+                    result = add_confidence_to_result(result, pixel_list_left, pixel_list_right)
             else:
-                result = add_confidence_to_result(result, pixel_list_left, pixel_list_right)
-        else:
-            if self.with_names:
-                result = add_names_to_result(result, self.RTMPoseNames)
+                if self.with_names:
+                    result = add_names_to_result(result, self.RTMPoseNames)
+            all_results.append(result)
 
-        return result
+        return all_results
         
     @staticmethod
     def divide_3d_frame(frame: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
