@@ -25,15 +25,30 @@ from typing import List
 from .Image2DResult import Image2DResult
 from .Image3DResult import Image3DResult
 from .RTMPoseNames import RTMPoseNames
+from .Video2DResult import Video2DResult
 from .Video3DResult import Video3DResult
 
 from pose_estimation_recognition_utils import (Save2DData, Save2DDataWithConfidence, Save2DDataWithName,
                                                Save2DDataWithNameAndConfidence, SkeletonDataPoint,
                                                SkeletonDataPointWithConfidence, SkeletonDataPointWithName,
                                                SkeletonDataPointWithNameAndConfidence, ImageSkeletonData,
-                                               VideoSkeletonData)
+                                               ImageSkeletonData2D, VideoSkeletonData, VideoSkeletonData2D)
 
-def image2d_result_to_save_2d_data(result: Image2DResult) -> List[Save2DData]:
+def get_2d_bbox_from_2d_result(result: Image2DResult, p_idx: int) -> List[float]:
+    if hasattr(result, "bboxes") and result.bboxes is not None and len(result.bboxes) > p_idx:
+        box = result.bboxes[p_idx]
+        if len(box) >= 4:
+            return [float(box[0]), float(box[1]), float(box[2] - box[0]), float(box[3] - box[1])]
+    return []
+    
+def get_bbox_from_3d_result(result: Image3DResult, p_idx: int) -> List[float]:
+    if hasattr(result, "bboxes_2d") and result.bboxes_2d is not None and len(result.bboxes_2d) > p_idx:
+        box = result.bboxes_2d[p_idx]
+        if len(box) >= 4:
+            return [float(box[0]), float(box[1]), float(box[2] - box[0]), float(box[3] - box[1])]
+    return []
+
+def image2d_result_to_save_2d_data(result: Image2DResult) -> List[List[Save2DData]]:
     '''
     Function to convert Image2DResult to a list of Save2DData.
 
@@ -41,18 +56,17 @@ def image2d_result_to_save_2d_data(result: Image2DResult) -> List[Save2DData]:
         result (Image2DResult): The input Image2DResult object.
 
     Returns:
-        List[Save2DData]: A list of Save2DData objects.
+        List[List[Save2DData]]: A list of Save2DData objects per person.
     '''
-    back = []
-    i = 0
+    back_persons = []
+    for p_idx in range(result.num_persons):
+        back = []
+        for i, point in enumerate(result.keypoints[p_idx]):
+            back.append(Save2DData(i, float(point[0]), float(point[1])))
+        back_persons.append(back)
+    return back_persons
 
-    for point in result.keypoints[0]:
-        back.append(Save2DData(i, float(point[0]), float(point[1])))
-        i+=1
-
-    return back
-
-def image2d_result_to_save_2d_data_with_confidence(result: Image2DResult) -> List[Save2DDataWithConfidence]:
+def image2d_result_to_save_2d_data_with_confidence(result: Image2DResult) -> List[List[Save2DDataWithConfidence]]:
     '''
     Function to convert Image2DResult to a list of Save2DDataWithConfidence.
 
@@ -60,18 +74,17 @@ def image2d_result_to_save_2d_data_with_confidence(result: Image2DResult) -> Lis
         result (Image2DResult): The input Image2DResult object.
 
     Returns:
-        List[Save2DDataWithConfidence]: A list of Save2DDataWithConfidence objects.
+        List[List[Save2DDataWithConfidence]]: A list of Save2DDataWithConfidence objects per person.
     '''
-    back = []
-    i = 0
+    back_persons = []
+    for p_idx in range(result.num_persons):
+        back = []
+        for i, point in enumerate(result.keypoints[p_idx]):
+            back.append(Save2DDataWithConfidence(i, float(point[0]), float(point[1]), float(result.scores[p_idx][i])))
+        back_persons.append(back)
+    return back_persons
 
-    for point in result.keypoints[0]:
-        back.append(Save2DDataWithConfidence(i, float(point[0]), float(point[1]), float(result.scores[0][i])))
-        i+=1
-
-    return back
-
-def image2d_result_to_save_2d_data_with_name(result: Image2DResult) -> List[Save2DDataWithName]:
+def image2d_result_to_save_2d_data_with_name(result: Image2DResult) -> List[List[Save2DDataWithName]]:
     '''
     Function to convert Image2DResult to a list of Save2DDataWithName.
 
@@ -79,19 +92,20 @@ def image2d_result_to_save_2d_data_with_name(result: Image2DResult) -> List[Save
         result (Image2DResult): The input Image2DResult object.
 
     Returns:
-        List[Save2DDataWithName]: A list of Save2DDataWithName objects.
+        List[List[Save2DDataWithName]]: A list of Save2DDataWithName objects per person.
     '''
+    if result.num_persons == 0:
+        return []
     name_list = RTMPoseNames(model_type=result.keypoints[0].shape[0])
-    back = []
-    i = 0
+    back_persons = []
+    for p_idx in range(result.num_persons):
+        back = []
+        for i, point in enumerate(result.keypoints[p_idx]):
+            back.append(Save2DDataWithName(i, name_list.get_name(i), float(point[0]), float(point[1])))
+        back_persons.append(back)
+    return back_persons
 
-    for point in result.keypoints[0]:
-        back.append(Save2DDataWithName(i, name_list.get_name(i), float(point[0]), float(point[1])))
-        i+=1
-
-    return back
-
-def image2d_result_to_save_2d_data_with_name_and_confidence(result: Image2DResult) -> List[Save2DDataWithNameAndConfidence]:
+def image2d_result_to_save_2d_data_with_name_and_confidence(result: Image2DResult) -> List[List[Save2DDataWithNameAndConfidence]]:
     '''
     Function to convert Image2DResult to a list of Save2DDataWithNameAndConfidence.
 
@@ -99,20 +113,20 @@ def image2d_result_to_save_2d_data_with_name_and_confidence(result: Image2DResul
         result (Image2DResult): The input Image2DResult object.
 
     Returns:
-        List[Save2DDataWithNameAndConfidence]: A list of Save2DDataWithNameAndConfidence objects.
+        List[List[Save2DDataWithNameAndConfidence]]: A list of Save2DDataWithNameAndConfidence objects per person.
     '''
-    name_list=RTMPoseNames(model_type=result.keypoints[0].shape[0])
-    back=[]
-    i=0
+    if result.num_persons == 0:
+        return []
+    name_list = RTMPoseNames(model_type=result.keypoints[0].shape[0])
+    back_persons = []
+    for p_idx in range(result.num_persons):
+        back = []
+        for i, point in enumerate(result.keypoints[p_idx]):
+            back.append(Save2DDataWithNameAndConfidence(i, name_list.get_name(i), float(point[0]), float(point[1]), result.scores[p_idx][i]))
+        back_persons.append(back)
+    return back_persons
 
-    for point in result.keypoints[0]:
-        back.append(Save2DDataWithNameAndConfidence(i, name_list.get_name(i), float(point[0]), float(point[1]),
-                                                    result.scores[0][i]))
-        i+=1
-
-    return back
-
-def image3d_result_to_skeleton_data_point(result: Image3DResult) -> List[SkeletonDataPoint]:
+def image3d_result_to_skeleton_data_point(result: Image3DResult) -> List[List[SkeletonDataPoint]]:
     '''
     Function to convert Image3DResult to a list of SkeletonDataPoint.
 
@@ -120,17 +134,17 @@ def image3d_result_to_skeleton_data_point(result: Image3DResult) -> List[Skeleto
         result (Image3DResult): The input Image3DResult object.
 
     Returns:
-        List[SkeletonDataPoint]: A list of SkeletonDataPoint objects.  
+        List[List[SkeletonDataPoint]]: A list of SkeletonDataPoint objects per person.  
     '''
-    back = []
-    i=0
-    for point in result.keypoints_3d[0]:
-        back.append(SkeletonDataPoint(i, float(point[0]), float(point[1]), float(point[2])))
-        i+=1
+    back_persons = []
+    for p_idx in range(result.num_persons):
+        back = []
+        for i, point in enumerate(result.keypoints_3d[p_idx]):
+            back.append(SkeletonDataPoint(i, float(point[0]), float(point[1]), float(point[2])))
+        back_persons.append(back)
+    return back_persons
 
-    return back
-
-def image3d_result_to_skeleton_data_point_with_confidence(result: Image3DResult) -> List[SkeletonDataPointWithConfidence]:
+def image3d_result_to_skeleton_data_point_with_confidence(result: Image3DResult) -> List[List[SkeletonDataPointWithConfidence]]:
     '''
     Function to convert Image3DResult to a list of SkeletonDataPointWithConfidence.
 
@@ -138,19 +152,17 @@ def image3d_result_to_skeleton_data_point_with_confidence(result: Image3DResult)
         result (Image3DResult): The input Image3DResult object.
 
     Returns:
-        List[SkeletonDataPointWithConfidence]: A list of SkeletonDataPointWithConfidence objects. 
+        List[List[SkeletonDataPointWithConfidence]]: A list of SkeletonDataPointWithConfidence objects per person. 
     '''
-    back = []
-    i=0
+    back_persons = []
+    for p_idx in range(result.num_persons):
+        back = []
+        for i, point in enumerate(result.keypoints_3d[p_idx]):
+            back.append(SkeletonDataPointWithConfidence(i, float(point[0]), float(point[1]), float(point[2]), float(result.scores_3d[p_idx][i])))
+        back_persons.append(back)
+    return back_persons
 
-    for point in result.keypoints_3d[0]:
-        back.append(SkeletonDataPointWithConfidence(i, float(point[0]), float(point[1]), float(point[2]),
-                                                    float(result.scores_3d[0][i])))
-        i+=1
-
-    return back
-
-def image3d_result_to_skeleton_data_point_with_name(result: Image3DResult) -> List[SkeletonDataPointWithName]:
+def image3d_result_to_skeleton_data_point_with_name(result: Image3DResult) -> List[List[SkeletonDataPointWithName]]:
     '''
     Function to convert Image3DResult to a list of SkeletonDataPointWithName.
 
@@ -158,20 +170,20 @@ def image3d_result_to_skeleton_data_point_with_name(result: Image3DResult) -> Li
         result (Image3DResult): The input Image3DResult object.
 
     Returns:
-        List[SkeletonDataPointWithName]: A list of SkeletonDataPointWithName objects.
+        List[List[SkeletonDataPointWithName]]: A list of SkeletonDataPointWithName objects per person.
     '''
-    name_list=RTMPoseNames(model_type=result.keypoints_3d[0].shape[0])
-    back = []
-    i=0
+    if result.num_persons == 0:
+        return []
+    name_list = RTMPoseNames(model_type=result.keypoints_3d[0].shape[0])
+    back_persons = []
+    for p_idx in range(result.num_persons):
+        back = []
+        for i, point in enumerate(result.keypoints_3d[p_idx]):
+            back.append(SkeletonDataPointWithName(i, name_list.get_name(i), float(point[0]), float(point[1]), float(point[2])))
+        back_persons.append(back)
+    return back_persons
 
-    for point in result.keypoints_3d[0]:
-        back.append(SkeletonDataPointWithName(i, name_list.get_name(i), float(point[0]), float(point[1]),
-                                              float(point[2])))
-        i+=1
-
-    return back
-
-def image3d_result_to_skeleton_data_point_with_name_and_confidence(result: Image3DResult) -> List[SkeletonDataPointWithConfidence]:
+def image3d_result_to_skeleton_data_point_with_name_and_confidence(result: Image3DResult) -> List[List[SkeletonDataPointWithConfidence]]:
     '''
     Function to convert Image3DResult to a list of SkeletonDataPointWithNameAndConfidence.
 
@@ -179,20 +191,40 @@ def image3d_result_to_skeleton_data_point_with_name_and_confidence(result: Image
         result (Image3DResult): The input Image3DResult object.
 
     Returns:
-        List[SkeletonDataPointWithNameAndConfidence]: A list of SkeletonDataPointWithNameAndConfidence objects.
+        List[List[SkeletonDataPointWithNameAndConfidence]]: A list of SkeletonDataPointWithNameAndConfidence objects per person.
     '''
-    name_list=RTMPoseNames(model_type=result.keypoints_3d[0].shape[0])
-    back = []
-    i=0
+    if result.num_persons == 0:
+        return []
+    name_list = RTMPoseNames(model_type=result.keypoints_3d[0].shape[0])
+    back_persons = []
+    for p_idx in range(result.num_persons):
+        back = []
+        for i, point in enumerate(result.keypoints_3d[p_idx]):
+            back.append(SkeletonDataPointWithNameAndConfidence(i, name_list.get_name(i), float(point[0]), float(point[1]), float(point[2]), result.scores_3d[p_idx][i]))
+        back_persons.append(back)
+    return back_persons
 
-    for point in result.keypoints_3d[0]:
-        back.append(SkeletonDataPointWithNameAndConfidence(i, name_list.get_name(i), float(point[0]), float(point[1]),
-                                                           float(point[2]), result.scores_3d[0][i]))
-        i+=1
+def image3d_result_to_image_skeleton_data(result: Image3DResult) -> List[ImageSkeletonData]:
+    '''
+    Function to convert Image3DResult to a list of ImageSkeletonData for multiple persons.
 
-    return back
+    Args:
+        result (Image3DResult): The input Image3DResult object.
 
-def image3d_result_to_image_skeleton_data(result: Image3DResult) -> ImageSkeletonData:
+    Returns:
+        List[ImageSkeletonData]: A list of ImageSkeletonData objects.
+    '''
+    persons_list = []
+    points_per_person = image3d_result_to_skeleton_data_point(result)
+    for p_idx in range(result.num_persons):
+        bbox = get_bbox_from_3d_result(result, p_idx)
+        back = ImageSkeletonData(person_id=p_idx, BoundingBox=bbox if bbox else None)
+        for point in points_per_person[p_idx]:
+            back.add_data_point(point)
+        persons_list.append(back)
+    return persons_list
+
+def image3d_result_to_image_skeleton_data_with_confidence(result: Image3DResult) -> List[ImageSkeletonData]:
     '''
     Function to convert Image3DResult to a list of ImageSkeletonData.
 
@@ -202,16 +234,17 @@ def image3d_result_to_image_skeleton_data(result: Image3DResult) -> ImageSkeleto
     Returns:
         List[ImageSkeletonData]: A list of ImageSkeletonData objects.
     '''
-    back = ImageSkeletonData()
+    persons_list = []
+    points_per_person = image3d_result_to_skeleton_data_point_with_confidence(result)
+    for p_idx in range(result.num_persons):
+        bbox = get_bbox_from_3d_result(result, p_idx)
+        back = ImageSkeletonData(person_id=p_idx, BoundingBox=bbox if bbox else None)
+        for point in points_per_person[p_idx]:
+            back.add_data_point(point)
+        persons_list.append(back)
+    return persons_list
 
-    points = image3d_result_to_skeleton_data_point(result)
-
-    for point in points:
-        back.add_data_point(point)
-
-    return back
-
-def image3d_result_to_image_skeleton_data_with_confidence(result: Image3DResult) -> ImageSkeletonData:
+def image3d_result_to_image_skeleton_data_with_name(result: Image3DResult) -> List[ImageSkeletonData]:
     '''
     Function to convert Image3DResult to a list of ImageSkeletonData.
 
@@ -221,16 +254,17 @@ def image3d_result_to_image_skeleton_data_with_confidence(result: Image3DResult)
     Returns:
         List[ImageSkeletonData]: A list of ImageSkeletonData objects.
     '''
-    back = ImageSkeletonData()
+    persons_list = []
+    points_per_person = image3d_result_to_skeleton_data_point_with_name(result)
+    for p_idx in range(result.num_persons):
+        bbox = get_bbox_from_3d_result(result, p_idx)
+        back = ImageSkeletonData(person_id=p_idx, BoundingBox=bbox if bbox else None)
+        for point in points_per_person[p_idx]:
+            back.add_data_point(point)
+        persons_list.append(back)
+    return persons_list
 
-    points = image3d_result_to_skeleton_data_point_with_confidence(result)
-
-    for point in points:
-        back.add_data_point(point)
-
-    return back
-
-def image3d_result_to_image_skeleton_data_with_name(result: Image3DResult) -> ImageSkeletonData:
+def image3d_result_to_image_skeleton_data_with_name_and_confidence(result: Image3DResult) -> List[ImageSkeletonData]:
     '''
     Function to convert Image3DResult to a list of ImageSkeletonData.
 
@@ -240,33 +274,15 @@ def image3d_result_to_image_skeleton_data_with_name(result: Image3DResult) -> Im
     Returns:
         List[ImageSkeletonData]: A list of ImageSkeletonData objects.
     '''
-    back = ImageSkeletonData()
-
-    points = image3d_result_to_skeleton_data_point_with_name(result)
-
-    for point in points:
-        back.add_data_point(point)
-
-    return back
-
-def image3d_result_to_image_skeleton_data_with_name_and_confidence(result: Image3DResult) -> ImageSkeletonData:
-    '''
-    Function to convert Image3DResult to a list of ImageSkeletonData.
-
-    Args:
-        result (Image3DResult): The input Image3DResult object.
-
-    Returns:
-        List[ImageSkeletonData]: A list of ImageSkeletonData objects.
-    '''
-    back = ImageSkeletonData()
-
-    points = image3d_result_to_skeleton_data_point_with_name_and_confidence(result)
-
-    for point in points:
-        back.add_data_point(point)
-
-    return back
+    persons_list = []
+    points_per_person = image3d_result_to_skeleton_data_point_with_name_and_confidence(result)
+    for p_idx in range(result.num_persons):
+        bbox = get_bbox_from_3d_result(result, p_idx)
+        back = ImageSkeletonData(person_id=p_idx, BoundingBox=bbox if bbox else None)
+        for point in points_per_person[p_idx]:
+            back.add_data_point(point)
+        persons_list.append(back)
+    return persons_list
 
 def video3d_result_to_video_skeleton_data(result: Video3DResult) -> List[VideoSkeletonData]:
     '''
@@ -279,17 +295,12 @@ def video3d_result_to_video_skeleton_data(result: Video3DResult) -> List[VideoSk
         List[VideoSkeletonData]: A list of VideoSkeletonData objects.
     '''
     back = []
-    i = 0
-
-    for frame in result.frame_results:
+    for i, frame in enumerate(result.frame_results):
         vsd = VideoSkeletonData(i)
-
-        for point in image3d_result_to_skeleton_data_point(frame):
-            vsd.add_data_point(point)
-
+        persons = image3d_result_to_image_skeleton_data(frame)
+        for p in persons:
+            vsd.add_person(p)
         back.append(vsd)
-        i+=1
-
     return back
 
 def video3d_result_to_video_skeleton_data_with_confidence(result: Video3DResult) -> List[VideoSkeletonData]:
@@ -303,17 +314,12 @@ def video3d_result_to_video_skeleton_data_with_confidence(result: Video3DResult)
         List[VideoSkeletonData]: A list of VideoSkeletonData objects.
     '''
     back = []
-    i = 0
-
-    for frame in result.frame_results:
+    for i, frame in enumerate(result.frame_results):
         vsd = VideoSkeletonData(i)
-
-        for point in image3d_result_to_skeleton_data_point_with_confidence(frame):
-            vsd.add_data_point(point)
-
+        persons = image3d_result_to_image_skeleton_data_with_confidence(frame)
+        for p in persons:
+            vsd.add_person(p)
         back.append(vsd)
-        i+=1
-
     return back
 
 def video3d_result_to_video_skeleton_data_with_name(result: Video3DResult) -> List[VideoSkeletonData]:
@@ -327,17 +333,12 @@ def video3d_result_to_video_skeleton_data_with_name(result: Video3DResult) -> Li
         List[VideoSkeletonData]: A list of VideoSkeletonData objects.
     '''
     back = []
-    i = 0
-
-    for frame in result.frame_results:
+    for i, frame in enumerate(result.frame_results):
         vsd = VideoSkeletonData(i)
-
-        for point in image3d_result_to_skeleton_data_point_with_name(frame):
-            vsd.add_data_point(point)
-
+        persons = image3d_result_to_image_skeleton_data_with_name(frame)
+        for p in persons:
+            vsd.add_person(p)
         back.append(vsd)
-        i+=1
-
     return back
 
 def video3d_result_to_video_skeleton_data_with_name_and_confidence(result: Video3DResult) -> List[VideoSkeletonData]:
@@ -351,15 +352,166 @@ def video3d_result_to_video_skeleton_data_with_name_and_confidence(result: Video
         List[VideoSkeletonData]: A list of VideoSkeletonData objects.
     '''
     back = []
-    i = 0
-
-    for frame in result.frame_results:
+    for i, frame in enumerate(result.frame_results):
         vsd = VideoSkeletonData(i)
-
-        for point in image3d_result_to_skeleton_data_point_with_name_and_confidence(frame):
-            vsd.add_data_point(point)
-
+        persons = image3d_result_to_image_skeleton_data_with_name_and_confidence(frame)
+        for p in persons:
+            vsd.add_person(p)
         back.append(vsd)
-        i+=1
+    return back
 
+def image2d_result_to_image_skeleton_data_2d(result: Image2DResult) -> List[ImageSkeletonData2D]:
+    '''
+    Function to convert Image2DResult to an ImageSkeletonData2D object.
+
+    Args:
+        result (Image2DResult): The input Image2DResult object.
+
+    Returns:
+        List[ImageSkeletonData2D]: A list of ImageSkeletonData2D objects.
+    '''
+    persons_list = []
+    points_per_person = image2d_result_to_save_2d_data(result)
+    for p_idx in range(result.num_persons):
+        bbox = get_2d_bbox_from_2d_result(result, p_idx)
+        back = ImageSkeletonData2D(person_id=p_idx, BoundingBox=bbox if bbox else None)
+        for point in points_per_person[p_idx]:
+            back.add_data_point(point)
+        persons_list.append(back)
+    return persons_list
+
+def image2d_result_to_image_skeleton_data_with_confidence_2d(result: Image2DResult) -> List[ImageSkeletonData2D]:
+    '''
+    Function to convert Image2DResult to an ImageSkeletonData2D object with confidence.
+
+    Args:
+        result (Image2DResult): The input Image2DResult object.
+
+    Returns:
+        List[ImageSkeletonData2D]: A list of ImageSkeletonData2D objects.
+    '''
+    persons_list = []
+    points_per_person = image2d_result_to_save_2d_data_with_confidence(result)
+    for p_idx in range(result.num_persons):
+        bbox = get_2d_bbox_from_2d_result(result, p_idx)
+        back = ImageSkeletonData2D(person_id=p_idx, BoundingBox=bbox if bbox else None)
+        for point in points_per_person[p_idx]:
+            back.add_data_point(point)
+        persons_list.append(back)
+    return persons_list
+
+def image2d_result_to_image_skeleton_data_with_name_2d(result: Image2DResult) -> List[ImageSkeletonData2D]:
+    '''
+    Function to convert Image2DResult to an ImageSkeletonData2D object with names.
+
+    Args:
+        result (Image2DResult): The input Image2DResult object.
+
+    Returns:
+        List[ImageSkeletonData2D]: A list of ImageSkeletonData2D objects.
+    '''
+    persons_list = []
+    points_per_person = image2d_result_to_save_2d_data_with_name(result)
+    for p_idx in range(result.num_persons):
+        bbox = get_2d_bbox_from_2d_result(result, p_idx)
+        back = ImageSkeletonData2D(person_id=p_idx, BoundingBox=bbox if bbox else None)
+        for point in points_per_person[p_idx]:
+            back.add_data_point(point)
+        persons_list.append(back)
+    return persons_list
+
+def image2d_result_to_image_skeleton_data_with_name_and_confidence_2d(result: Image2DResult) -> List[ImageSkeletonData2D]:
+    '''
+    Function to convert Image2DResult to an ImageSkeletonData2D object with names and confidence.
+
+    Args:
+        result (Image2DResult): The input Image2DResult object.
+
+    Returns:
+        List[ImageSkeletonData2D]: A list of ImageSkeletonData2D objects.
+    '''
+    persons_list = []
+    points_per_person = image2d_result_to_save_2d_data_with_name_and_confidence(result)
+    for p_idx in range(result.num_persons):
+        bbox = get_2d_bbox_from_2d_result(result, p_idx)
+        back = ImageSkeletonData2D(person_id=p_idx, BoundingBox=bbox if bbox else None)
+        for point in points_per_person[p_idx]:
+            back.add_data_point(point)
+        persons_list.append(back)
+    return persons_list
+
+def video2d_result_to_video_skeleton_data_2d(result: Video2DResult) -> List[VideoSkeletonData2D]:
+    '''
+    Function to convert Video2DResult to a list of VideoSkeletonData2D objects.
+
+    Args:
+        result (Video2DResult): The input Video2DResult object.
+
+    Returns:
+        List[VideoSkeletonData2D]: A list of VideoSkeletonData2D objects.
+    '''
+    back = []
+    for i, frame in enumerate(result.frame_results):
+        vsd = VideoSkeletonData2D(i)
+        persons = image2d_result_to_image_skeleton_data_2d(frame)
+        for p in persons:
+            vsd.add_person(p)
+        back.append(vsd)
+    return back
+
+def video2d_result_to_video_skeleton_data_with_confidence_2d(result: Video2DResult) -> List[VideoSkeletonData2D]:
+    '''
+    Function to convert Video2DResult to a list of VideoSkeletonData2D objects with confidence.
+
+    Args:
+        result (Video2DResult): The input Video2DResult object.
+
+    Returns:
+        List[VideoSkeletonData2D]: A list of VideoSkeletonData2D objects.
+    '''
+    back = []
+    for i, frame in enumerate(result.frame_results):
+        vsd = VideoSkeletonData2D(i)
+        persons = image2d_result_to_image_skeleton_data_with_confidence_2d(frame)
+        for p in persons:
+            vsd.add_person(p)
+        back.append(vsd)
+    return back
+
+def video2d_result_to_video_skeleton_data_with_name_2d(result: Video2DResult) -> List[VideoSkeletonData2D]:
+    '''
+    Function to convert Video2DResult to a list of VideoSkeletonData2D objects with names.
+
+    Args:
+        result (Video2DResult): The input Video2DResult object.
+
+    Returns:
+        List[VideoSkeletonData2D]: A list of VideoSkeletonData2D objects.
+    '''
+    back = []
+    for i, frame in enumerate(result.frame_results):
+        vsd = VideoSkeletonData2D(i)
+        persons = image2d_result_to_image_skeleton_data_with_name_2d(frame)
+        for p in persons:
+            vsd.add_person(p)
+        back.append(vsd)
+    return back
+
+def video2d_result_to_video_skeleton_data_with_name_and_confidence_2d(result: Video2DResult) -> List[VideoSkeletonData2D]:
+    '''
+    Function to convert Video2DResult to a list of VideoSkeletonData2D objects with names and confidence.
+
+    Args:
+        result (Video2DResult): The input Video2DResult object.
+
+    Returns:
+        List[VideoSkeletonData2D]: A list of VideoSkeletonData2D objects.
+    '''
+    back = []
+    for i, frame in enumerate(result.frame_results):
+        vsd = VideoSkeletonData2D(i)
+        persons = image2d_result_to_image_skeleton_data_with_name_and_confidence_2d(frame)
+        for p in persons:
+            vsd.add_person(p)
+        back.append(vsd)
     return back
