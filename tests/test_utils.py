@@ -50,43 +50,50 @@ def sample_video2d_result(sample_2d_result):
 
 def test_image2d_result_to_save_2d_data(sample_2d_result):
     data_list = image2d_result_to_save_2d_data(sample_2d_result)
-    assert len(data_list) == 17
-    assert data_list[0].data['id'] == 0
-    assert data_list[0].data['x'] == float(sample_2d_result.keypoints[0][0][0])
+    assert len(data_list) == 1
+    assert len(data_list[0]) == 17
+    assert data_list[0][0].data['id'] == 0
+    assert data_list[0][0].data['x'] == float(sample_2d_result.keypoints[0][0][0])
 
 def test_image2d_result_to_save_2d_data_with_confidence(sample_2d_result):
     data_list = image2d_result_to_save_2d_data_with_confidence(sample_2d_result)
-    assert len(data_list) == 17
-    assert data_list[0].data['confidence'] == float(sample_2d_result.scores[0][0])
+    assert len(data_list) == 1
+    assert len(data_list[0]) == 17
+    assert data_list[0][0].data['confidence'] == float(sample_2d_result.scores[0][0])
 
 def test_image2d_result_to_save_2d_data_with_name(sample_2d_result):
     data_list = image2d_result_to_save_2d_data_with_name(sample_2d_result)
-    assert len(data_list) == 17
-    assert data_list[0].data['name'] == 'nose'
+    assert len(data_list) == 1
+    assert len(data_list[0]) == 17
+    assert data_list[0][0].data['name'] == 'nose'
 
 def test_image3d_result_to_skeleton_data_point(sample_3d_result):
     data_list = image3d_result_to_skeleton_data_point(sample_3d_result)
-    assert len(data_list) == 17
-    assert data_list[0].data['z'] == float(sample_3d_result.keypoints_3d[0][0][2])
+    assert len(data_list) == 1
+    assert len(data_list[0]) == 17
+    assert data_list[0][0].data['z'] == float(sample_3d_result.keypoints_3d[0][0][2])
 
 def test_image3d_result_to_skeleton_data_point_with_name_and_confidence(sample_3d_result):
     # This specifically tests my fix in utils.py
     data_list = image3d_result_to_skeleton_data_point_with_name_and_confidence(sample_3d_result)
-    assert len(data_list) == 17
+    assert len(data_list) == 1
+    assert len(data_list[0]) == 17
     # Verify name exists
-    assert 'name' in data_list[0].data
-    assert data_list[0].data['name'] == 'nose'
+    assert 'name' in data_list[0][0].data
+    assert data_list[0][0].data['name'] == 'nose'
     # Verify confidence exists
-    assert 'confidence' in data_list[0].data
-    assert data_list[0].data['confidence'] == float(sample_3d_result.scores_3d[0][0])
+    assert 'confidence' in data_list[0][0].data
+    assert data_list[0][0].data['confidence'] == float(sample_3d_result.scores_3d[0][0])
 
 def test_image2d_result_to_image_skeleton_data_2d(sample_2d_result):
     skeleton_data = image2d_result_to_image_skeleton_data_2d(sample_2d_result)
-    assert len(skeleton_data.get_data_points()) == 17
-    assert skeleton_data.get_data_points()[0].data['x'] == float(sample_2d_result.keypoints[0][0][0])
+    assert len(skeleton_data) == 1
+    assert len(skeleton_data[0].get_data_points()) == 17
+    assert skeleton_data[0].get_data_points()[0].data['x'] == float(sample_2d_result.keypoints[0][0][0])
 
 def test_video2d_result_to_video_skeleton_data_2d(sample_video2d_result):
     video_skeleton_data_list = video2d_result_to_video_skeleton_data_2d(sample_video2d_result)
     assert len(video_skeleton_data_list) == 2
     assert video_skeleton_data_list[0].frame == 0
-    assert len(video_skeleton_data_list[0].get_data_points()) == 17
+    assert len(video_skeleton_data_list[0].persons) == 1
+    assert len(video_skeleton_data_list[0].persons[0].get_data_points()) == 17
