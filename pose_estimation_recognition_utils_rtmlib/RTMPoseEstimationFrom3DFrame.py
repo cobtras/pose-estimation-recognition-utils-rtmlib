@@ -23,7 +23,8 @@ License: Apache License 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
 """
 
 from pose_estimation_recognition_utils import (SAD, SkeletonDataPoint, SkeletonDataPointWithName,
-                                               SkeletonDataPointWithConfidence, SkeletonDataPointWithNameAndConfidence)
+                                               SkeletonDataPointWithConfidence, SkeletonDataPointWithNameAndConfidence,
+                                               PEImage, ImageSkeletonData, SkeletonGraph)
 from .RTMPoseNames import RTMPoseNames
 from .rtm_pose_estimator_2d import RTMPoseEstimator2D
 from .utils import (image2d_result_to_save_2d_data_with_confidence)
@@ -218,3 +219,28 @@ class RTMPoseEstimationFrom3DFrame:
         frame_left = frame[:, :dividing_point]
         frame_right = frame[:, dividing_point:]
         return (frame_left, frame_right)
+
+    def extract_frame_to_pe(
+            self,
+            frame: np.ndarray,
+            graph: Optional['SkeletonGraph'] = None,
+            calculate_bone_vectors: bool = False
+    ) -> 'PEImage':
+        """
+        Extracts 3D frames and returns a fully populated PEImage object.
+        """
+        persons_points = self.extract_frame(frame)
+        pe_image = PEImage(origin=self.__class__.__name__, graph=graph)
+        pe_image.HumanDetectionModel = self.model.det_model_path if hasattr(self.model, 'det_model_path') else None
+        pe_image.PoseEstimationModel = self.model.pose_model_path if hasattr(self.model, 'pose_model_path') else None
+        
+        for p_idx, points in enumerate(persons_points):
+            person_data = ImageSkeletonData(person_id=p_idx, BoundingBox=None)
+            for pt in points:
+                person_data.add_data_point(pt)
+            pe_image.add_person(person_data)
+            
+        if calculate_bone_vectors and graph is not None:
+            pe_image.calculate_bone_vectors()
+            
+        return pe_image

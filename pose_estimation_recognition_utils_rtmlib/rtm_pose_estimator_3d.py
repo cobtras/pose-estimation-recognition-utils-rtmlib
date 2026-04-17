@@ -32,6 +32,8 @@ from .rtm_pose_estimator_2d import RTMPoseEstimator2D
 from .rtm_lifting import RTMLifting
 from .Image3DResult import Image3DResult
 from .Video3DResult import Video3DResult
+from pose_estimation_recognition_utils import PEImage, PEVideo, SkeletonGraph
+from .utils import image3d_result_to_image_skeleton_data_with_confidence, video3d_result_to_video_skeleton_data_with_confidence
 
 class RTMPoseEstimator3D:
     
@@ -172,4 +174,61 @@ class RTMPoseEstimator3D:
             fps=fps,
             processing_time=processing_time
         )
+
+    def process_image_to_pe(
+            self,
+            image: np.ndarray,
+            image_idx: int = 0,
+            graph: Optional['SkeletonGraph'] = None,
+            calculate_bone_vectors: bool = False
+    ) -> 'PEImage':
+        """
+        Process 3D pose estimation on a single image and return a PEImage object.
+        """
+        result = self.process_image(image, image_idx)
+        persons = image3d_result_to_image_skeleton_data_with_confidence(result)
+        
+        pe_image = PEImage(origin=self.__class__.__name__, graph=graph)
+        pe_image.HumanDetectionModel = self.estimator.det_model_path if hasattr(self.estimator, 'det_model_path') else None
+        pe_image.PoseEstimationModel = self.estimator.pose_model_path if hasattr(self.estimator, 'pose_model_path') else None
+        
+        for p in persons:
+            pe_image.add_person(p)
+            
+        if calculate_bone_vectors and graph is not None:
+            pe_image.calculate_bone_vectors()
+            
+        return pe_image
+        
+    def process_video_to_pe(
+            self,
+            video_path: Union[str, Path],
+            max_frames: Optional[int] = None,
+            graph: Optional['SkeletonGraph'] = None,
+            calculate_bone_vectors: bool = False,
+            calculate_kinematics: bool = False,
+            fps_for_kinematics: float = None,
+            **kwargs
+    ) -> 'PEVideo':
+        """
+        Process 3D pose estimation on a video and return a PEVideo object.
+        """
+        result = self.process_video(video_path, max_frames=max_frames, **kwargs)
+        frames = video3d_result_to_video_skeleton_data_with_confidence(result)
+        
+        pe_video = PEVideo(origin=self.__class__.__name__, data=frames, graph=graph)
+        pe_video.HumanDetectionModel = self.estimator.det_model_path if hasattr(self.estimator, 'det_model_path') else None
+        pe_video.PoseEstimationModel = self.estimator.pose_model_path if hasattr(self.estimator, 'pose_model_path') else None
+        
+        if calculate_bone_vectors and graph is not None:
+            pe_video.calculate_bone_vectors()
+            
+        if calculate_kinematics:
+            fps = fps_for_kinematics if fps_for_kinematics else result.fps
+            if fps and fps > 0:
+                time_dt = 1.0 / fps
+                for i in range(1, len(pe_video.data)):
+                    pe_video.data[i].calculate_kinematics(pe_video.data[i - 1], time_dt)
+                    
+        return pe_video
 
