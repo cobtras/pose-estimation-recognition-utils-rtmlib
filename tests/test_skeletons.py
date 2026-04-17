@@ -15,14 +15,14 @@ def test_skeletons():
     graph_17 = RTMPoseSkeletons.get_skeleton_graph(17)
     print(f"17-point graph: {graph_17}")
     print(f"Edges: {len(graph_17.edges)}")
-    assert len(graph_17.edges) == 18, f"Expected 18 edges, got {len(graph_17.edges)}"
+    assert len(graph_17.edges) == 19, f"Expected 19 edges, got {len(graph_17.edges)}"
     
     print("\nTesting 133-point skeleton...")
     graph_133 = RTMPoseSkeletons.get_skeleton_graph(133)
     print(f"133-point graph: {graph_133}")
     print(f"Edges: {len(graph_133.edges)}")
-    # Currently 133 point graph has 17-point body connections
-    assert len(graph_133.edges) == 18, f"Expected 18 edges, got {len(graph_133.edges)}"
+    # Currently 133 point graph has body, face, hand and foot connections
+    assert len(graph_133.edges) == 121, f"Expected 121 edges, got {len(graph_133.edges)}"
 
     print("\nVerification successful!")
 
