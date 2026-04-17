@@ -29,7 +29,8 @@ from .RTMPoseNames import RTMPoseNames
 from .rtm_pose_estimator_2d import RTMPoseEstimator2D
 from .utils import (image2d_result_to_save_2d_data_with_confidence)
 import numpy as np
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
+
 
 def add_names_to_result(result, RTMPoseNames):
     """
