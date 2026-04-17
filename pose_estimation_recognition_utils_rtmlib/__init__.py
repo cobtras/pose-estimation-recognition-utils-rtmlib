@@ -38,7 +38,7 @@ from .utils import (
 )
 from .colors import PERSON_COLORS
 
-__version__ = '0.3.1'
+__version__ = '0.4.0b1'
 
 __all__ = [
     'Image2DResult', 'Image3DResult', 'Video2DResult', 'Video3DResult',
